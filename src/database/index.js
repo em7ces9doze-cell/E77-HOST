@@ -11,23 +11,17 @@ const db = new Database(file);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 
-db.exec(\`
-  CREATE TABLE IF NOT EXISTS warnings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    guild_id TEXT NOT NULL,
-    user_id TEXT NOT NULL,
-    moderator_id TEXT NOT NULL,
-    reason TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-  CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings(guild_id, user_id);
-  CREATE TABLE IF NOT EXISTS guild_settings (
-    guild_id TEXT PRIMARY KEY,
-    log_channel_id TEXT,
-    welcome_channel_id TEXT,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-  );
-\`);
+db.exec(
+  "CREATE TABLE IF NOT EXISTS warnings (" +
+  "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+  "guild_id TEXT NOT NULL, user_id TEXT NOT NULL, " +
+  "moderator_id TEXT NOT NULL, reason TEXT NOT NULL, " +
+  "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);" +
+  "CREATE INDEX IF NOT EXISTS idx_warnings_guild_user ON warnings(guild_id, user_id);" +
+  "CREATE TABLE IF NOT EXISTS guild_settings (" +
+  "guild_id TEXT PRIMARY KEY, log_channel_id TEXT, welcome_channel_id TEXT, " +
+  "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);"
+);
 
 module.exports = {
   addWarning(guildId, userId, moderatorId, reason) {
