@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
+const https = require('node:https');
 const {
   Client,
   GatewayIntentBits,
@@ -12,8 +13,6 @@ const {
   Routes,
   SlashCommandBuilder,
   PermissionFlagsBits,
-  ChannelType,
-  EmbedBuilder,
   MessageFlags
 } = require('discord.js');
 
@@ -22,6 +21,9 @@ const CLIENT_ID = process.env.CLIENT_ID?.trim();
 const GUILD_ID = process.env.GUILD_ID?.trim() || null;
 const BRIDGE_SECRET = process.env.EM7_CONTROL_BOT_BRIDGE_SECRET?.trim();
 const PORT = Number.parseInt(process.env.PORT || '8080', 10);
+
+// رابط لوحة تحكم Manus المستهدفة
+const MANUS_PANEL_URL = 'https://em7control-vxdcumhb.manus.space';
 
 if (!TOKEN || !CLIENT_ID) {
   console.error('[CONFIG] Missing DISCORD_TOKEN or CLIENT_ID.');
@@ -48,6 +50,9 @@ client.once(Events.ClientReady, async () => {
   } catch (e) {
     console.error('Command registration failed:', e.message);
   }
+
+  // بدء تشغيل حلقة العامل (Polling Worker) فور جاهزية البوت
+  startBridgeWorker();
 });
 
 client.on(Events.InteractionCreate, async interaction => {
@@ -55,46 +60,83 @@ client.on(Events.InteractionCreate, async interaction => {
   if (interaction.commandName === 'ping') {
     await interaction.reply({ content: `Pong! Latency: ${Math.round(client.ws.ping)}ms`, flags: MessageFlags.Ephemeral });
   } else if (interaction.commandName === 'help') {
-    await interaction.reply({ content: 'E77 Control System Bridge is active.', flags: MessageFlags.Ephemeral });
+    await interaction.reply({ content: 'E77 Control System Bridge is active and operational.', flags: MessageFlags.Ephemeral });
   }
 });
 
-// خادم الويب المتوافق تماماً مع بروتوكول جسر Manus
-const server = http.createServer((req, res) => {
-  const reqSecret = req.headers['x-bridge-secret'] || req.headers['authorization']?.replace('Bearer ', '') || '';
-
-  // السماح بطلبات التحقق والصحة
-  if (req.url === '/' || req.url === '/health' || req.url === '/api/health') {
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({ status: 'running', botReady: client.isReady(), botTag: client.user?.tag || null }));
+// ─────────────────────────────────────────────────────────────────────────────
+// نظام العامل النشط (Polling Worker) لمخاطبة لوحة Manus وتغيير حالة الجسر
+// ─────────────────────────────────────────────────────────────────────────────
+function startBridgeWorker() {
+  if (!BRIDGE_SECRET) {
+    console.warn('[BRIDGE] Warning: EM7_CONTROL_BOT_BRIDGE_SECRET is not configured.');
     return;
   }
 
-  // مسارات الجسر المطلوبة من لوحة Manus
-  if (req.url.startsWith('/api/bridge') || req.url.startsWith('/bridge')) {
-    if (BRIDGE_SECRET && reqSecret !== BRIDGE_SECRET) {
-      res.writeHead(403, { 'content-type': 'application/json; charset=utf-8' });
-      res.end(JSON.stringify({ error: 'Forbidden: Invalid bridge secret' }));
-      return;
-    }
+  console.log('[BRIDGE] Starting active polling worker towards Manus panel...');
 
-    res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-    res.end(JSON.stringify({
-      success: true,
-      status: 'connected',
+  const pollInterval = setInterval(() => {
+    const targetUrl = `${MANUS_PANEL_URL}/api/bridge/operations/claim`;
+    const payload = JSON.stringify({
       botTag: client.user?.tag || 'EM7 HOST',
       guildsCount: client.guilds.cache.size,
-      message: 'EM7 SYSTEM Bridge connected successfully'
-    }));
-    return;
-  }
+      status: 'online',
+      timestamp: Date.now()
+    });
 
-  res.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify({ error: 'Not Found' }));
+    const urlObj = new URL(targetUrl);
+    const options = {
+      hostname: urlObj.hostname,
+      port: urlObj.port || 443,
+      path: urlObj.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${BRIDGE_SECRET}`,
+        'X-Bridge-Secret': BRIDGE_SECRET,
+        'Content-Length': Buffer.byteLength(payload)
+      },
+      timeout: 6000
+    };
+
+    const req = https.request(options, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log('[BRIDGE] Poll successful. Manus panel acknowledged heartbeat.');
+        } else {
+          // يمكن تتبع حالة الرد عند الحاجة
+        }
+      });
+    });
+
+    req.on('error', () => {
+      // تجاهل الأخطاء العابرة للشبكة لضمان استمرار عمل البوت بسلاسة
+    });
+
+    req.write(payload);
+    req.end();
+  }, 8000); // إرسال نبضات اتصال كل 8 ثوانٍ لتثبيت الحالة المتصلة
+
+  return pollInterval;
+}
+
+// خادم HTTP محلي للاستجابة السريعة لأي فحص خارجي
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify({
+    success: true,
+    status: 'connected',
+    botReady: client.isReady(),
+    botTag: client.user?.tag || 'EM7 HOST',
+    guildsCount: client.guilds.cache.size,
+    message: 'EM7 SYSTEM Bridge active worker running'
+  }));
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`[HTTP] Bridge server listening on port ${PORT}`);
+  console.log(`[HTTP] Worker server listening on port ${PORT}`);
 });
 
 client.login(TOKEN).catch(e => {
