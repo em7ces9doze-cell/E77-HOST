@@ -1,6 +1,5 @@
 "use strict";
 
-const { PermissionFlagsBits } = require("discord.js");
 const config = require("../config");
 
 function isOwner(userId) {
@@ -8,17 +7,17 @@ function isOwner(userId) {
 }
 
 function hasPermission(interaction, permission) {
-  return interaction.memberPermissions?.has(permission) || isOwner(interaction.user.id);
+  return Boolean(interaction.memberPermissions?.has(permission) || isOwner(interaction.user.id));
 }
 
-function canModerate(interaction, targetMember) {
+function canModerate(interaction, targetMember, permission) {
   if (!interaction.inGuild() || !targetMember) return false;
   if (isOwner(interaction.user.id)) return true;
-  if (!interaction.memberPermissions?.has(PermissionFlagsBits.ModerateMembers)) return false;
+  if (!permission || !interaction.memberPermissions?.has(permission)) return false;
   if (targetMember.id === interaction.guild.ownerId) return false;
   if (targetMember.id === interaction.user.id) return false;
-  const moderator = interaction.guild.members.me;
-  if (moderator && targetMember.roles.highest.position >= moderator.roles.highest.position) return false;
+  const botMember = interaction.guild.members.me;
+  if (botMember && targetMember.roles.highest.position >= botMember.roles.highest.position) return false;
   const actor = interaction.member;
   if (actor?.roles?.highest && targetMember.roles.highest.position >= actor.roles.highest.position) return false;
   return true;
