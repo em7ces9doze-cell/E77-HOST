@@ -10,7 +10,8 @@
   },
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js"
+    "check": "node --check index.js && node --check bridge-engine.js",
+    "test": "node --test"
   },
   "dependencies": {
     "discord.js": "14.28.1"
