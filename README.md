@@ -26,7 +26,7 @@ The dashboard message is reused in the same channel instead of creating a new pa
    - FPS: 6, 8, 10, 12, 15, 24, or 30.
    - Resolution: 480p, 720p, or 1080p.
    - Aspect ratio: landscape 16:9, portrait 9:16, or square 1:1.
-5. Edit the sequence with **ترتيب إطار**, **مدة إطار**, **حذف إطار**, and **حذف آخر إطار**.
+5. Inspect the numbered **عرض الإطارات** list, then edit the sequence with **ترتيب إطار**, **مدة إطار**, **حذف إطار**, and **حذف آخر إطار**.
 6. Use **تسمية المشروع** and **مشاريعي** to manage and switch projects.
 7. Use **حذف المشروع** only after confirming the deletion.
 8. Preview the result, optionally add one audio file, then export MP4.
