@@ -106,6 +106,7 @@ async function executeCommand(interaction) {
       '`/nickname` تغيير اسم عضو',
       '`/createchannel` إنشاء قناة',
       '`/createrole` إنشاء رتبة',
+      '`/addrole` و `/removerole` إسناد وإزالة رتبة',
     ].join('\n'));
     return interaction.reply({ embeds: [embed], ephemeral: true });
   }
