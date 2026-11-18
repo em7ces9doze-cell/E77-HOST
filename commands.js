@@ -4,8 +4,10 @@ const economy=require('./economy-store');
 const storeSettings=require('./store-settings');
 const botCatalog=require('./bot-catalog');
 const subscriptions=require('./subscription-store');
+const tokenVault=require('./token-vault');
 const ADMIN=PermissionFlagsBits.Administrator;
 const commands=[
+ new SlashCommandBuilder().setName('token').setDescription('إدارة مخزون اعتمادات E77 الآمن').setDefaultMemberPermissions(ADMIN).addSubcommand(s=>s.setName('setup').setDescription('إنشاء روم خزنة التوكنات السرية')),
  new SlashCommandBuilder().setName('رومات').setDescription('إعداد وإدارة رومات متجر E77').setDefaultMemberPermissions(ADMIN)
   .addSubcommand(s=>s.setName('setup').setDescription('إنشاء أو تحديث رومات المتجر حسب الإعدادات'))
   .addSubcommand(s=>s.setName('settings').setDescription('تعديل أسماء الرومات ورتبة فريق المتجر')
@@ -39,7 +41,7 @@ const commands=[
   .addSubcommand(s=>s.setName('coins-remove').setDescription('خصم رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
   .addSubcommand(s=>s.setName('coins-set').setDescription('تعيين رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('الرصيد').setMinValue(0).setMaxValue(1000000000).setRequired(true)))
 ].map(x=>x.toJSON());
-const ADMIN_ACTIONS=new Set(['رومات:setup','رومات:settings','hosting:setup','hosting:panel','store:add','store:remove','e77-admin:coins-add','e77-admin:coins-remove','e77-admin:coins-set']);
+const ADMIN_ACTIONS=new Set(['token:setup','رومات:setup','رومات:settings','hosting:setup','hosting:panel','store:add','store:remove','e77-admin:coins-add','e77-admin:coins-remove','e77-admin:coins-set']);
 const fmt=n=>new Intl.NumberFormat('en-US').format(n);
 const makeEmbed=(title,description)=>new EmbedBuilder().setColor(0x7653D8).setTitle(title).setDescription(description).setFooter({text:'E77 HOST • Hosting Services'}).setTimestamp();
 const isAdmin=i=>Boolean(i.memberPermissions?.has(ADMIN));
@@ -87,6 +89,29 @@ async function createStoreRooms(guild){
  return {category,sales,admin};
 }
 
+async function createTokenVaultRoom(guild){
+ const me=guild.members.me;if(!me?.permissions.has(PermissionFlagsBits.ManageChannels))throw Error('NEED_CHANNEL_PERMISSION');
+ const overwrites=[{id:guild.id,deny:[PermissionFlagsBits.ViewChannel]},...guild.roles.cache.filter(r=>r.permissions.has(ADMIN)).map(r=>({id:r.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]})),{id:me.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory,PermissionFlagsBits.EmbedLinks,PermissionFlagsBits.ManageChannels]}];
+ let category=guild.channels.cache.find(c=>c.type===ChannelType.GuildCategory&&c.name==='E77 SECURITY');
+ if(!category)category=await guild.channels.create({name:'E77 SECURITY',type:ChannelType.GuildCategory,permissionOverwrites:overwrites,reason:'E77 private credential vault'});
+ let channel=guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&c.parentId===category.id&&c.topic==='E77_TOKEN_VAULT');
+ if(!channel)channel=await guild.channels.create({name:'🔐・توكنات',type:ChannelType.GuildText,parent:category.id,topic:'E77_TOKEN_VAULT',permissionOverwrites:overwrites,reason:'E77 private credential vault'});else await channel.permissionOverwrites.set(overwrites,'E77 vault access control');
+ const messages=await channel.messages.fetch({limit:15}).catch(()=>null);const existing=messages?.find(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 SECURITY | خزنة الاعتمادات');
+ const payload={embeds:[makeEmbed('E77 SECURITY | خزنة الاعتمادات','لوحة إدارة الاعتمادات السرية.\n\nخزنة E77: مراجع أسرار بوتات E77، وتُقرأ القيم من Secrets في FadeHost فقط.\nتطبيقات العملاء: بيانات التطبيق والسيرفر وحالة التثبيت، منفصلة عن مخزون E77.\n\nلا تلصق أي Bot Token هنا. زر الإضافة يسجل مرجع السر فقط بعد ضبطه في FadeHost. لا يتم عرض قيم الأسرار أو تسجيلها.')],components:[tokenVaultRow()]};
+ if(existing)await existing.edit(payload);else await channel.send(payload);return {category,channel};
+}
+function tokenVaultRow(){return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('token:counts').setLabel('عرض العدد').setEmoji('📊').setStyle(ButtonStyle.Primary),new ButtonBuilder().setCustomId('token:add-owned').setLabel('إضافة اعتماد E77').setEmoji('🔐').setStyle(ButtonStyle.Success),new ButtonBuilder().setCustomId('token:add-customer').setLabel('تسجيل تطبيق عميل').setEmoji('👤').setStyle(ButtonStyle.Secondary),new ButtonBuilder().setCustomId('token:audit').setLabel('سجل العمليات').setEmoji('🧾').setStyle(ButtonStyle.Secondary)));}
+function ownedSecretModal(){return new ModalBuilder().setCustomId('token:modal:owned').setTitle('إضافة اعتماد E77').addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('secret_ref').setLabel('مرجع السر في FadeHost').setPlaceholder('E77_GUARD_PRIMARY').setStyle(TextInputStyle.Short).setMinLength(3).setMaxLength(48).setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('product_id').setLabel('معرف المنتج').setPlaceholder('guard').setStyle(TextInputStyle.Short).setMinLength(2).setMaxLength(32).setRequired(true)));}
+function customerAppModal(){return new ModalBuilder().setCustomId('token:modal:customer').setTitle('تسجيل تطبيق عميل').addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('application_id').setLabel('Discord Application ID').setStyle(TextInputStyle.Short).setMinLength(17).setMaxLength(20).setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('owner_id').setLabel('Discord Owner ID').setStyle(TextInputStyle.Short).setMinLength(17).setMaxLength(20).setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('guild_id').setLabel('Target Server ID').setStyle(TextInputStyle.Short).setMinLength(17).setMaxLength(20).setRequired(true)));}
+async function handleTokenVaultInteraction(i){
+ if(!i.inGuild()||!isAdmin(i))return i.reply({content:'هذه اللوحة مخصصة لإدارة E77 فقط.',ephemeral:true});
+ if(i.isButton()&&i.customId==='token:counts'){const c=tokenVault.counts();return i.reply({embeds:[makeEmbed('إحصائيات خزنة E77','مخزون E77\nالمتاح: '+c.ownedReady+'\nالمخصص: '+c.ownedAssigned+'\nالإجمالي: '+c.ownedTotal+'\n\nتطبيقات العملاء\nالمسجلة: '+c.customerApps+'\nبانتظار التثبيت: '+c.customerPending)],ephemeral:true});}
+ if(i.isButton()&&i.customId==='token:add-owned')return i.showModal(ownedSecretModal());
+ if(i.isButton()&&i.customId==='token:add-customer')return i.showModal(customerAppModal());
+ if(i.isButton()&&i.customId==='token:audit'){const rows=tokenVault.listAudit(10),body=rows.length?rows.map(x=>x.action+' • <@'+x.actorId+'> • <t:'+Math.floor(x.at/1000)+':R>').join('\n'):'لا توجد عمليات مسجلة.';return i.reply({embeds:[makeEmbed('سجل خزنة الاعتمادات',body)],ephemeral:true});}
+ if(i.isModalSubmit()&&i.customId==='token:modal:owned'){await i.deferReply({ephemeral:true});const item=tokenVault.addOwnedSecretReference({ref:i.fields.getTextInputValue('secret_ref'),productId:i.fields.getTextInputValue('product_id'),actorId:i.user.id});return i.editReply({embeds:[makeEmbed('تم تسجيل مرجع الاعتماد','المرجع: '+item.secretRef+'\nالمنتج: '+item.productId+'\nالحالة: متاح\nالقيمة السرية بقيت داخل FadeHost ولم تُرسل إلى Discord أو GitHub.')]});}
+ if(i.isModalSubmit()&&i.customId==='token:modal:customer'){await i.deferReply({ephemeral:true});const item=tokenVault.addCustomerApp({applicationId:i.fields.getTextInputValue('application_id').trim(),ownerId:i.fields.getTextInputValue('owner_id').trim(),guildId:i.fields.getTextInputValue('guild_id').trim(),actorId:i.user.id});return i.editReply({embeds:[makeEmbed('تم تسجيل تطبيق العميل','Application ID: '+item.applicationId+'\nOwner ID: '+item.ownerId+'\nGuild ID: '+item.guildId+'\nالحالة: بانتظار تثبيت التطبيق عبر Discord OAuth2.\nهذا التسجيل لا ينشئ تطبيقًا جديدًا ولا يستخرج Bot Token.')]});}
+}
 function storeEntryRow(){return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('e77:catalog').setLabel('تصفح البوتات').setEmoji('🛍️').setStyle(ButtonStyle.Primary));}
 function productSelectRow(){return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('e77:product').setPlaceholder('اختر البوت المطلوب').addOptions(botCatalog.products.map(p=>({label:p.name,description:(p.category+' • '+p.description).slice(0,100),value:p.id}))));}
 function planSelectRow(productId){return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('e77:plan:'+productId).setPlaceholder('اختر مدة الاشتراك').addOptions(botCatalog.plans.map(p=>({label:p.label,description:'اشتراك لمدة '+p.durationDays+' يومًا',value:p.id}))));}
@@ -121,6 +146,7 @@ async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
  const group=i.commandName,sub=i.options.getSubcommand(false),key=group+':'+sub,g=i.guildId,u=i.user.id;
  if(group==='ping')return i.editReply({content:'Pong! 🟢 E77 HOST يعمل.'});
+ if(group==='token'){const rooms=await createTokenVaultRoom(i.guild);return i.editReply({content:'تم تجهيز خزنة الاعتمادات السرية: '+rooms.channel.toString()+'\nتأكد من ضبط E77_VAULT_ENCRYPTION_KEY في أسرار FadeHost.'});}
  if(group==='رومات'){
   if(sub==='settings'){
    const patch={};
@@ -185,6 +211,7 @@ async function executeCommand(i){
  if(group==='e77-admin'){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.editReply({content:'لا يمكن تعديل رصيد بوت.'});const mode={'coins-add':'add','coins-remove':'remove','coins-set':'set'}[sub];const r=await economy.adminAdjust(g,target.id,amount,mode);return i.editReply({content:'تم تحديث رصيد '+target+' إلى '+fmt(r.balance)+' E77.'});}
 }
 async function handleInteraction(i){
+ if((i.isButton()&&i.customId.startsWith('token:'))||(i.isModalSubmit()&&i.customId.startsWith('token:'))){try{return await handleTokenVaultInteraction(i);}catch(e){const map={E77_VAULT_KEY_NOT_CONFIGURED:'خزنة التشفير غير مهيأة. أضف E77_VAULT_ENCRYPTION_KEY إلى أسرار FadeHost.',E77_VAULT_SECRET_MISSING:'مرجع السر غير موجود في أسرار FadeHost. أضف E77_BOT_SECRET_<REF> أولًا.',E77_VAULT_DUPLICATE:'هذا المرجع مسجل مسبقًا.',E77_VAULT_INVALID_SECRET_REF:'صيغة مرجع السر غير صالحة.',E77_VAULT_INVALID_DISCORD_ID:'أحد معرّفات Discord غير صالح.',E77_VAULT_CUSTOMER_APP_EXISTS:'هذا التطبيق مسجل مسبقًا.'};const message=map[e.message]||'تعذر تنفيذ عملية الخزنة. راجع إعدادات الأسرار وصلاحيات الإدارة.';if(i.deferred||i.replied)await i.editReply({content:message}).catch(()=>{});else await i.reply({content:message,ephemeral:true}).catch(()=>{});console.error('[E77_VAULT] operation failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));return;}}
  if(i.isButton()||i.isStringSelectMenu()||(i.isModalSubmit()&&i.customId.startsWith('e77:order:'))){try{return await handleStoreComponent(i);}catch(e){const messages={E77_PRODUCT_NOT_FOUND:'المنتج غير موجود.',E77_PLAN_NOT_FOUND:'مدة الاشتراك غير صالحة.',E77_INVALID_GUILD_ID:'معرّف السيرفر غير صالح.',E77_INVALID_BOT_NAME:'اسم البوت يجب أن يكون من 2 إلى 32 حرفًا.',E77_INVALID_BOT_USERNAME:'اسم المستخدم يجب أن يكون إنجليزيًا صغيرًا ويحتوي أحرفًا وأرقامًا و _ أو . فقط.'};const message=messages[e.message]||'تعذر إكمال طلبك. تحقق من البيانات وحاول مجددًا.';if(i.deferred||i.replied)await i.editReply({content:message}).catch(()=>{});else await i.reply({content:message,ephemeral:true}).catch(()=>{});console.error('[E77_STORE] interaction failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));return;}}
  if(!i.isChatInputCommand())return;
  try{
@@ -200,4 +227,4 @@ async function handleInteraction(i){
  }
 }
 async function registerCommands(client){if(!client.application?.commands)throw Error('APPLICATION_NOT_READY');const id=process.env.DISCORD_GUILD_ID;const result=await client.application.commands.set(commands,id||undefined);console.log('[COMMANDS] Registered '+result.size+' E77 HOST command groups.');}
-module.exports={commands,ADMIN_ACTIONS,executeCommand,handleInteraction,registerCommands,storeEntryRow,productSelectRow,planSelectRow,orderModal};
+module.exports={commands,ADMIN_ACTIONS,executeCommand,handleInteraction,registerCommands,storeEntryRow,productSelectRow,planSelectRow,orderModal,tokenVaultRow,ownedSecretModal,customerAppModal};
