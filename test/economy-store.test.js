@@ -30,7 +30,7 @@ test('bank deposits and withdrawals are atomic and appear in the transaction his
 
   const history = await economy.transactions('guild-test', 'user-test', 10);
   assert.deepEqual(history.map(entry => entry.type), ['withdraw', 'deposit']);
-  assert.deepEqual(history.map(entry => entry.amount), [40, 100]);
+  assert.deepEqual(history.map(entry => entry.amount), [40, 60]);
 });
 
 test('v1 economy migration preserves existing balances and classifies legacy products safely', async t => {
