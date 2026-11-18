@@ -63,7 +63,7 @@ async function handleMessage(m){
   return say(m,'تم إنشاء لوحة بنك الخليج التفاعلية وتثبيتها. استخدم القائمة والأزرار بدل تكرار الأوامر.');
  }
  if(c==='+بنك')return m.channel.send(dashboard());
- if(c==='+مساعدة')return say(m,'لوحة البنك: +بنك • +تفعيل (للمشرف مرة واحدة)\nتداول 200 — اختر شركة من القائمة لشراء الأسهم\nبيع_سهم NAMA 2 — بيع سهمين من شركة نماء\n+رصيدي • +يومي • +عمل • +نرد 100\n+تحويل @عضو 100 • +ايداع 100 • +سحب 100\n+السوق • +شراء GOLD 2 • +بيع GOLD 1\n+محفظتي • +سجل • +تحدي • +اغنياء');
+ if(c==='+مساعدة')return say(m,'لوحة البنك: +بنك • +تفعيل (للمشرف مرة واحدة)\nتداول 200 — اختر شركة من القائمة لشراء الأسهم\nبيع_سهم NAMA 2 — بيع سهمين من شركة نماء\n+رصيدي • +يومي • +عمل • +نرد (مجاني)\n+تحويل @عضو 100 • +ايداع 100 • +سحب 100\n+السوق • +شراء GOLD 2 • +بيع GOLD 1\n+محفظتي • +سجل • +تحدي • +اغنياء');
  if(c==='+رصيدي'||c==='+حسابي')return say(m,'رصيدك المتاح: '+money(db.balance(id).balance));
  if(c==='+يومي'||c==='+عمل'||c==='+تحدي'){const a=c==='+يومي'?'daily':c==='+عمل'?'work':'challenge';return m.reply({embeds:[view(a,id)]});}
  if(c==='+نرد'){const r=db.dice(id);return say(m,'🎲 نتيجتك **'+r.player+'/10** مقابل **'+r.bank+'/10**\n'+(r.result==='win'?'فزت! حصلت على نقطتي خبرة.':r.result==='loss'?'فاز البنك هذه الجولة.':'تعادل! لا تغيير في الرصيد.')+'\nرصيدك: '+money(r.balance));}
@@ -71,6 +71,7 @@ async function handleMessage(m){
  if(c==='+ايداع'||c==='+سحب'){const r=db.savings(id,c==='+ايداع'?'in':'out',p[1]);return say(m,r.ok?'تمت العملية. الرصيد '+money(r.account.balance)+' | التوفير '+money(r.account.savings):'المبلغ غير صحيح أو الرصيد غير كافٍ.');}
  if(c==='+السوق')return m.reply({embeds:[view('market',id)]});
  if(c==='+شركات')return m.reply({embeds:[stockBoard()]});
+ if(c==='+محفظة_الأسهم')return m.reply({embeds:[view('stockportfolio',id)]});
  if(c==='+شراء'||c==='+بيع'){const r=db.trade(id,c==='+شراء'?'buy':'sell',p[1],p[2]);return say(m,r.ok?'تمت العملية بقيمة '+money(r.total)+'. رصيدك '+money(r.account.balance):'تعذر تنفيذ الصفقة؛ تحقق من الرمز والكمية والرصيد.');}
  if(c==='+محفظتي'||c==='+سجل'||c==='+اغنياء'){const a=c==='+محفظتي'?'portfolio':c==='+سجل'?'history':'leaderboard';return m.reply({embeds:[view(a,id)]});}
 }
