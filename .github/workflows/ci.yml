@@ -1,20 +1,17 @@
-name: Gulf Bank CI
-
+name: Stop Motion Studio CI
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-
 jobs:
-  test:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
           cache: npm
-      - run: npm ci
+      - run: npm install
       - run: npm run check
-      - run: npm test

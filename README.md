@@ -1,71 +1,24 @@
-# بنك الخليج | GULF BANK
+# STOP MOTION STUDIO
+Discord bot that turns ordered image frames into MP4 stop-motion videos.
 
-اقتصاد افتراضي ترفيهي داخل Discord، مع واجهة استكشاف ثلاثية الأبعاد للمدينة. جميع العملات والأصول والنتائج افتراضية ولا تمثل أموالًا حقيقية أو خدمات مالية.
+## Deploy
+- Node.js 20+
+- Install: `npm install`
+- Start: `npm start`
+- Secret: `DISCORD_TOKEN` (or `BOT_TOKEN`)
+- Enable Message Content Intent in Discord Developer Portal.
+- Use a persistent mounted disk and set `STUDIO_DATA_DIR`; otherwise projects and images can be lost on redeploy.
+- Run one bot instance only; the JSON store is single-process.
 
-## ما يحتويه الإصدار
-- لوحة Discord تفاعلية وقائمة خدمات.
-- حسابات افتراضية تبدأ بـ 1,000 خليج، ومكافأة يومية ومهام وتحديات.
-- تحويلات بين الأعضاء، وحساب توفير، وسجل عمليات.
-- سوق افتراضي بعشر شركات وأسعار محاكاة، شراء أسهم وبيعها ومحفظة.
-- مركز ألعاب: نرد مجاني، سؤال تفاعلي، وتحديات داخل مدينة الويب.
-- مدينة 3D على الويب بأربع مناطق: المقر الرئيسي، البورصة، ساحة الألعاب، والساحة البحرية.
-- شعار بنك الخليج وشعار عملة الخليج في مجلد assets.
+## Use
+1. `+add` opens the control panel.
+2. Click **مشروع جديد**.
+3. Click **إضافة صور** and upload images in order in that channel.
+4. Send `+done`.
+5. Set FPS, resolution and aspect ratio.
+6. Preview, optionally add audio, then export MP4.
+7. `+help` displays the guide.
 
-## أوامر Discord
-| الأمر | الوظيفة |
-|---|---|
-| `+تفعيل` | ينشئ لوحة البنك ويثبتها (للمشرف مرة واحدة) |
-| `+بنك` | يعرض لوحة الخدمات |
-| `+العاب` | يعرض دليل الألعاب وأزرار تشغيلها |
-| `+العالم` | يرسل رابط مدينة 3D |
-| `+رصيدي` | يعرض الرصيد |
-| `+يومي` | المكافأة اليومية |
-| `+عمل` | مهمة عمل |
-| `+تحدي` | مكافأة تحدٍ يومي |
-| `+نرد` | نرد مجاني بالنقاط والخبرة دون رهانات |
-| `+سؤال` | سؤال معلومات بخيارات تفاعلية |
-| `تداول 200` | يفتح اختيار شركة لشراء الأسهم ضمن الميزانية |
-| `+شركات` | يعرض الشركات وأسعارها الافتراضية |
-| `بيع_سهم NAMA 2` | يبيع سهمين من شركة نماء |
-| `+محفظة_الأسهم` | يعرض محفظة الأسهم |
-| `+تحويل @عضو 100` | تحويل عملة افتراضية |
-| `+ايداع 100` / `+سحب 100` | إدارة حساب التوفير |
-| `+السوق` | سوق الأصول الافتراضية |
-| `+مساعدة` | دليل الأوامر |
-
-## تشغيل عالم 3D
-الخادم نفسه يقدّم ملفات الموقع الثابتة:
-- `/` — المدينة ثلاثية الأبعاد.
-- `/health` — حالة خدمة البوت والويب.
-- `/world.css` و`/world.js` — واجهة المدينة.
-
-بعد نشر الخدمة على FadeHost، أضف السر:
-- `PUBLIC_BASE_URL` = عنوان الخدمة العام الكامل، مثل `https://your-service.example` (استخدم عنوان النشر الفعلي لديك، لا المثال).
-
-بعدها أعد نشر `main`. سيستخدم أمر `+العالم` هذا العنوان. واجهة 3D تستخدم Three.js من CDN؛ لذلك يلزم اتصال إنترنت في متصفح العضو.
-
-## إعداد Discord
-- Node.js 22+
-- `DISCORD_TOKEN` أو `BOT_TOKEN` في Secrets.
-- تفعيل Message Content Intent في Discord Developer Portal.
-- السماح للبوت بإرسال الرسائل والتضمينات واستخدام قوائم التفاعل.
-- ثبّت لوحة البنك عبر `+تفعيل` بعد تشغيل البوت.
-
-## اختبارات محلية
-```bash
-npm ci
-npm run check
-npm test
-npm start
-```
-
-## حدود هذا الإصدار
-- عالم 3D الحالي واجهة استكشاف وألعاب متصفح أولية؛ لا يوجد حتى الآن تسجيل دخول Discord OAuth أو مزامنة مباشرة لأرصدة اللاعب داخل العالم.
-- ألعاب الويب تحفظ الحالة داخل جلسة الصفحة فقط؛ لا تُمنح منها عملات Discord.
-- تخزين البنك الحالي ملف JSON محلي؛ تأكد من أن FadeHost يوفر قرصًا دائمًا قبل الاعتماد على بقاء الأرصدة بعد إعادة النشر. لا تشغّل عدة نسخ من البوت على ملف البيانات نفسه.
-- سوق الشركات خيالي ومحاكى وليس مرتبطًا بشركات أو أسعار سوق حقيقية.
-
-## الهوية
-- `assets/gulf-bank-logo.svg` — شعار البنك.
-- `assets/gulf-coin.svg` — شعار العملة.
-- `BRAND.md` — دليل الهوية.
+## Limits
+Defaults: 80 frames, 8MB/image, 15MB/audio. Discord upload limits still apply. FFmpeg is bundled using ffmpeg-static. Keep backups of original media.
+Environment: `PREFIX`, `STUDIO_DATA_DIR`, `MAX_FRAMES`, `MAX_IMAGE_BYTES`, `MAX_AUDIO_BYTES`.
