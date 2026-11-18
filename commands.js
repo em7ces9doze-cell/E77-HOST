@@ -1,7 +1,9 @@
 'use strict';
-const {SlashCommandBuilder,EmbedBuilder,PermissionFlagsBits,ChannelType}=require('discord.js');
+const {SlashCommandBuilder,EmbedBuilder,PermissionFlagsBits,ChannelType,ActionRowBuilder,ButtonBuilder,ButtonStyle,StringSelectMenuBuilder,ModalBuilder,TextInputBuilder,TextInputStyle}=require('discord.js');
 const economy=require('./economy-store');
 const storeSettings=require('./store-settings');
+const botCatalog=require('./bot-catalog');
+const subscriptions=require('./subscription-store');
 const ADMIN=PermissionFlagsBits.Administrator;
 const commands=[
  new SlashCommandBuilder().setName('رومات').setDescription('إعداد وإدارة رومات متجر E77').setDefaultMemberPermissions(ADMIN)
@@ -74,10 +76,10 @@ async function createStoreRooms(guild){
  ];
  if(!admin)admin=await guild.channels.create({name:cfg.adminName,type:ChannelType.GuildText,parent:category.id,topic:'E77_STORE_ADMIN',permissionOverwrites:adminOverwrites,reason:'E77 STORE admin room'});
  else {if(admin.name!==cfg.adminName)await admin.setName(cfg.adminName,'E77 STORE settings');if(admin.topic!=='E77_STORE_ADMIN')await admin.setTopic('E77_STORE_ADMIN','E77 STORE marker').catch(()=>{});await admin.permissionOverwrites.set(adminOverwrites,'E77 STORE permissions sync');}
- const salesMessages=await sales.messages.fetch({limit:10}).catch(()=>null);
- if(!salesMessages?.some(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 STORE | متجر البوتات')){
-  await sales.send({embeds:[makeEmbed('E77 STORE | متجر البوتات','مرحبًا بك في متجر E77.\\n\\nتصفح المنتجات المتاحة باستخدام /store browse.\\nاختر البوت والاشتراك المناسب، ثم أكمل بيانات التفعيل.\\n\\nلا ترسل أي Bot Token أو كلمة مرور داخل Discord.')]});
- }
+ const salesMessages=await sales.messages.fetch({limit:20}).catch(()=>null);
+ const salesPanel=salesMessages?.find(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 STORE | متجر البوتات');
+ const panelPayload={embeds:[makeEmbed('E77 STORE | متجر البوتات','اختر البوت من الكتالوج، ثم حدد مدة الاشتراك وأرسل طلبك من الأزرار.\\n\\n1. تصفح البوتات واختر المنتج.\\n2. حدد مدة الاشتراك.\\n3. أدخل اسم البوت واسم المستخدم ومعرّف السيرفر.\\n4. يصل طلبك إلى فريق E77 للمراجعة.\\n\\nلا ترسل Bot Token أو كلمة مرور. إرسال الطلب لا يعني إتمام الدفع أو التسليم الآلي.')],components:[storeEntryRow()]};
+ if(salesPanel)await salesPanel.edit(panelPayload);else await sales.send(panelPayload);
  const adminMessages=await admin.messages.fetch({limit:10}).catch(()=>null);
  if(!adminMessages?.some(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 STORE | مركز الإدارة')){
   await admin.send({embeds:[makeEmbed('E77 STORE | مركز الإدارة','هذه القناة مخصصة لفريق الإدارة لمتابعة تجهيز المنتجات والطلبات والاشتراكات.\\n\\nتأكد من مراجعة هوية العميل والسيرفر قبل اعتماد أي تفعيل.')]});
@@ -85,6 +87,23 @@ async function createStoreRooms(guild){
  return {category,sales,admin};
 }
 
+function storeEntryRow(){return new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('e77:catalog').setLabel('تصفح البوتات').setEmoji('🛍️').setStyle(ButtonStyle.Primary));}
+function productSelectRow(){return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('e77:product').setPlaceholder('اختر البوت المطلوب').addOptions(botCatalog.products.map(p=>({label:p.name,description:(p.category+' • '+p.description).slice(0,100),value:p.id}))));}
+function planSelectRow(productId){return new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId('e77:plan:'+productId).setPlaceholder('اختر مدة الاشتراك').addOptions(botCatalog.plans.map(p=>({label:p.label,description:'اشتراك لمدة '+p.durationDays+' يومًا',value:p.id}))));}
+function orderModal(productId,planId){return new ModalBuilder().setCustomId('e77:order:'+productId+':'+planId).setTitle('بيانات طلب E77').addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('bot_name').setLabel('اسم البوت الظاهر').setStyle(TextInputStyle.Short).setMinLength(2).setMaxLength(32).setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('bot_username').setLabel('اسم المستخدم (إنجليزي)').setStyle(TextInputStyle.Short).setMinLength(2).setMaxLength(32).setPlaceholder('e77_my_bot').setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId('guild_id').setLabel('معرّف السيرفر المستهدف').setStyle(TextInputStyle.Short).setMinLength(17).setMaxLength(20).setRequired(true)));}
+async function handleStoreComponent(i){
+ if(i.isButton()&&i.customId==='e77:catalog')return i.reply({embeds:[makeEmbed('كتالوج بوتات E77','اختر أحد المنتجات الـ24 لعرض مدد الاشتراك.')],components:[productSelectRow()],ephemeral:true});
+ if(i.isStringSelectMenu()&&i.customId==='e77:product'){const p=botCatalog.getProduct(i.values[0]);if(!p)return i.reply({content:'المنتج غير موجود.',ephemeral:true});return i.reply({embeds:[makeEmbed(p.name,'القسم: '+p.category+'\\nالوصف: '+p.description+'\\nالميزات: '+p.features.join(' • ')+'\\n\\nاختر مدة الاشتراك.')],components:[planSelectRow(p.id)],ephemeral:true});}
+ if(i.isStringSelectMenu()&&i.customId.startsWith('e77:plan:')){const productId=i.customId.slice(9),planId=i.values[0];if(!botCatalog.getProduct(productId)||!botCatalog.getPlan(planId))return i.reply({content:'اختيار غير صالح.',ephemeral:true});return i.showModal(orderModal(productId,planId));}
+ if(i.isModalSubmit()&&i.customId.startsWith('e77:order:')){
+  await i.deferReply({ephemeral:true});const parts=i.customId.split(':'),productId=parts[2],planId=parts[3];
+  const order=await subscriptions.createOrder({productId,planId,ownerId:i.user.id,guildId:i.fields.getTextInputValue('guild_id').trim(),botName:i.fields.getTextInputValue('bot_name').trim(),botUsername:i.fields.getTextInputValue('bot_username').trim().toLowerCase()});
+  const p=botCatalog.getProduct(productId),plan=botCatalog.getPlan(planId),cfg=storeSettings.get(i.guildId);
+  const admin=i.guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&(c.topic==='E77_STORE_ADMIN'||c.name===cfg.adminName));let notified=false;
+  if(admin){await admin.send({embeds:[makeEmbed('طلب بوت جديد • '+order.id.slice(0,8),'العميل: '+i.user.toString()+' ('+i.user.id+')\\nالمنتج: '+p.name+'\\nالمدة: '+plan.label+'\\nاسم البوت: '+order.requestedBotName+'\\nUsername: '+order.requestedBotUsername+'\\nالسيرفر: '+order.guildId+'\\nالحالة: بانتظار مراجعة الإدارة\\n\\nلم يتم إنشاء تطبيق Discord أو تسليم توكن تلقائيًا.')]});notified=true;}
+  return i.editReply({embeds:[makeEmbed('تم تسجيل طلبك','رقم الطلب: '+order.id.slice(0,8)+'\\nالبوت: '+p.name+'\\nالمدة: '+plan.label+'\\nالحالة: بانتظار مراجعة الإدارة'+(notified?'\\nتم إرسال الطلب إلى روم الإدارة.':'\\nتعذر العثور على روم الإدارة؛ أبلغ فريق E77 برقم الطلب.'))]});
+ }
+}
 function panelEmbed(){return makeEmbed('E77 HOST | مركز الاستضافة','مرحبًا بك في خدمات الاستضافة.\n\n1. استخدم /store browse لاستعراض الباقات.\n2. استخدم /store buy لشراء الباقة بمعرفها.\n3. بعد الدفع، تُفتح لك قناة خاصة لمتابعة طلب الاستضافة.\n\nعملة E77 رصيد افتراضي داخل السيرفر، وليست عملة مشفرة حقيقية أو قابلة للسحب النقدي.');}
 async function openOrder(i,item){
  const {category}=await hostingArea(i.guild),me=i.guild.members.me;
@@ -166,6 +185,7 @@ async function executeCommand(i){
  if(group==='e77-admin'){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.editReply({content:'لا يمكن تعديل رصيد بوت.'});const mode={'coins-add':'add','coins-remove':'remove','coins-set':'set'}[sub];const r=await economy.adminAdjust(g,target.id,amount,mode);return i.editReply({content:'تم تحديث رصيد '+target+' إلى '+fmt(r.balance)+' E77.'});}
 }
 async function handleInteraction(i){
+ if(i.isButton()||i.isStringSelectMenu()||(i.isModalSubmit()&&i.customId.startsWith('e77:order:'))){try{return await handleStoreComponent(i);}catch(e){const messages={E77_PRODUCT_NOT_FOUND:'المنتج غير موجود.',E77_PLAN_NOT_FOUND:'مدة الاشتراك غير صالحة.',E77_INVALID_GUILD_ID:'معرّف السيرفر غير صالح.',E77_INVALID_BOT_NAME:'اسم البوت يجب أن يكون من 2 إلى 32 حرفًا.',E77_INVALID_BOT_USERNAME:'اسم المستخدم يجب أن يكون إنجليزيًا صغيرًا ويحتوي أحرفًا وأرقامًا و _ أو . فقط.'};const message=messages[e.message]||'تعذر إكمال طلبك. تحقق من البيانات وحاول مجددًا.';if(i.deferred||i.replied)await i.editReply({content:message}).catch(()=>{});else await i.reply({content:message,ephemeral:true}).catch(()=>{});console.error('[E77_STORE] interaction failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));return;}}
  if(!i.isChatInputCommand())return;
  try{
   const sub=i.options.getSubcommand(false);
