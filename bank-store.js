@@ -12,7 +12,7 @@ const companies={
  TAWAZON:{name:'توازن للطاقة',sector:'الطاقة',price:125,volatility:.05},
  MARSA:{name:'مرسى للنقل',sector:'النقل',price:65,volatility:.06},
  RIMAL:{name:'رمال للتعدين',sector:'التعدين',price:155,volatility:.075},
- WIFaq:{name:'وفاق للخدمات',sector:'الخدمات',price:90,volatility:.04},
+ WIFAQ:{name:'وفاق للخدمات',sector:'الخدمات',price:90,volatility:.04},
  AFAQ:{name:'آفاق للرعاية',sector:'الرعاية',price:105,volatility:.05}
 };
 function read(){try{const d=JSON.parse(fs.readFileSync(FILE,'utf8'));if(!d||!d.users)throw Error('INVALID_STORE');d.transactions=d.transactions||[];d.stocks=d.stocks||{};for(const [s,c] of Object.entries(companies))if(!d.stocks[s])d.stocks[s]={price:c.price,previous:c.price,updatedAt:0};return d;}catch(e){if(e.code==='ENOENT')return{users:{},transactions:[],stocks:{}};throw e;}}
