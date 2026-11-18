@@ -4,18 +4,18 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 const FILE = path.resolve(process.env.E7_ECONOMY_FILE || path.join(process.cwd(), 'data', 'economy.json'));
-const STARTING_BALANCE = 250;
-const DAILY_REWARD = 150;
-const WORK_MIN = 35;
-const WORK_MAX = 90;
+const STARTING_BALANCE = 100;
+const DAILY_REWARD = 75;
+const WORK_MIN = 10;
+const WORK_MAX = 25;
 const DAILY_COOLDOWN = 24 * 60 * 60 * 1000;
-const WORK_COOLDOWN = 60 * 60 * 1000;
+const WORK_COOLDOWN = 3 * 60 * 60 * 1000;
 
 let state;
 let queue = Promise.resolve();
 
 function freshState() {
-  return { version: 1, guilds: {} };
+  return { version: 2, guilds: {} };
 }
 function ensureGuild(data, guildId) {
   data.guilds[guildId] ||= { users: {}, shop: [], transactions: [] };
@@ -37,6 +37,8 @@ function ensureUser(guild, userId) {
   };
   const user = guild.users[userId];
   user.inventory ||= [];
+  user.totalEarned = Number.isSafeInteger(user.totalEarned) && user.totalEarned >= 0 ? user.totalEarned : 0;
+  user.totalSpent = Number.isSafeInteger(user.totalSpent) && user.totalSpent >= 0 ? user.totalSpent : 0;
   user.bank = Number.isSafeInteger(user.bank) && user.bank >= 0 ? user.bank : 0;
   user.balance = Number.isSafeInteger(user.balance) && user.balance >= 0 ? user.balance : 0;
   return user;
@@ -46,8 +48,25 @@ async function load() {
   await fs.mkdir(path.dirname(FILE), { recursive: true, mode: 0o700 });
   try {
     const parsed = JSON.parse(await fs.readFile(FILE, 'utf8'));
-    if (!parsed || parsed.version !== 1 || typeof parsed.guilds !== 'object') throw new Error('ECONOMY_SCHEMA_INVALID');
-    state = parsed;
+    if (!parsed || ![1, 2].includes(parsed.version) || typeof parsed.guilds !== 'object') throw new Error('ECONOMY_SCHEMA_INVALID');
+    // Non-destructive v1 -> v2 migration: keep every balance, bank amount,
+    // cooldown, inventory and transaction. Legacy products default to service
+    // until an administrator explicitly marks a product as hosting.
+    if (parsed.version === 1) {
+      for (const guild of Object.values(parsed.guilds)) {
+        guild.users ||= {};
+        guild.shop ||= [];
+        guild.transactions ||= [];
+        for (const item of guild.shop) {
+          if (!['hosting', 'service'].includes(item.kind)) item.kind = 'service';
+        }
+      }
+      parsed.version = 2;
+      state = parsed;
+      await persist();
+    } else {
+      state = parsed;
+    }
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
     state = freshState();
