@@ -6,3 +6,6 @@ test('daily reward can only be claimed once per day',()=>{assert.equal(db.daily(
 test('dice uses a 1 to 10 range and bounded stake',()=>{const r=db.dice('u2',100);assert.equal(r.ok,true);assert.ok(r.player>=1&&r.player<=10&&r.bank>=1&&r.bank<=10);assert.equal(db.dice('u2',999999).ok,false);});
 test('transfers and savings preserve balances',()=>{db.balance('u3');assert.equal(db.transfer('u2','u3',50).ok,true);assert.equal(db.savings('u2','in',20).ok,true);assert.equal(db.balance('u3').balance,1050);});
 test('virtual market supports buy and sell',()=>{assert.equal(db.trade('u2','buy','GOLD',1).ok,true);assert.equal(db.trade('u2','sell','GOLD',1).ok,true);});
+
+test('virtual stock exchange lists ten fictional companies',()=>assert.equal(db.stockMarket().length,10));
+test('stock purchase and sale update cash and portfolio',()=>{const before=db.balance('stock-user').balance;const buy=db.buyStock('stock-user','NAMA',500);assert.equal(buy.ok,true);assert.ok(buy.shares>=1);assert.ok(db.stockPortfolio('stock-user').some(x=>x.symbol==='NAMA'));const sell=db.sellStock('stock-user','NAMA',buy.shares);assert.equal(sell.ok,true);assert.equal(db.balance('stock-user').balance,before-buy.total+sell.total);});
