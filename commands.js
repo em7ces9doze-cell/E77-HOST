@@ -3,11 +3,11 @@ const {SlashCommandBuilder,EmbedBuilder,PermissionFlagsBits,ChannelType}=require
 const economy=require('./economy-store');
 const ADMIN=PermissionFlagsBits.Administrator;
 const commands=[
- new SlashCommandBuilder().setName('help').setDescription('دليل استخدام بوت E77 HOST'),
  new SlashCommandBuilder().setName('hosting').setDescription('مركز خدمات الاستضافة')
   .addSubcommand(s=>s.setName('setup').setDescription('إنشاء قسم ولوحة الاستضافة'))
   .addSubcommand(s=>s.setName('panel').setDescription('نشر لوحة الاستضافة في روم').addChannelOption(o=>o.setName('channel').setDescription('الروم').addChannelTypes(ChannelType.GuildText).setRequired(true)))
-  .addSubcommand(s=>s.setName('guide').setDescription('دليل طلب الاستضافة')),
+  .addSubcommand(s=>s.setName('guide').setDescription('دليل طلب الاستضافة'))
+  .addSubcommand(s=>s.setName('help').setDescription('عرض جميع أوامر البوت')),
  new SlashCommandBuilder().setName('store').setDescription('باقات وخدمات E77 HOST')
   .addSubcommand(s=>s.setName('browse').setDescription('عرض الباقات'))
   .addSubcommand(s=>s.setName('buy').setDescription('شراء باقة أو خدمة').addStringOption(o=>o.setName('item_id').setDescription('معرف المنتج').setRequired(true)))
@@ -59,11 +59,10 @@ async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
  const group=i.commandName,sub=i.options.getSubcommand(),key=group+':'+sub,g=i.guildId,u=i.user.id;
  if(ADMIN_ACTIONS.has(key)&&!isAdmin(i))return i.editReply({content:'هذا الإجراء مخصص للإدارة.'});
- if(group==='help'){
-  return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
-   '**الاستضافة**\n/hosting guide — دليل الطلب\n/hosting setup — تجهيز المركز (الإدارة)\n/hosting panel — نشر اللوحة\n\n**المتجر**\n/store browse — عرض الخدمات\n/store buy — شراء منتج\n\n**العملة E77**\n/coins balance — رصيدك\n/coins daily — المكافأة اليومية\n/coins work — مكافأة العمل\n/coins transfer — تحويل\n/coins deposit و /coins withdraw — البنك\n/coins history — سجل العمليات\n/coins profile — الملف الاقتصادي\n/coins leaderboard — ترتيب الأرصدة\n/coins inventory — المشتريات\n\n**للإدارة**\n/store add و /store remove\n/e77-admin coins-add و coins-remove و coins-set\n\nعملة E77 نقاط افتراضية داخل السيرفر وليست أموالًا قابلة للسحب.')]});
- }
  if(group==='hosting'){
+  if(sub==='help')return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
+   '**الاستضافة**\n/hosting guide — دليل الطلب\n/hosting setup — تجهيز المركز (الإدارة)\n/hosting panel — نشر اللوحة\n\n**المتجر**\n/store browse — عرض الخدمات\n/store buy — شراء منتج\n\n**العملة E77**\n/coins balance — رصيدك\n/coins daily — المكافأة اليومية\n/coins work — مكافأة العمل\n/coins transfer — تحويل\n/coins deposit و /coins withdraw — البنك\n/coins history — سجل العمليات\n/coins profile — الملف الاقتصادي\n/coins leaderboard — ترتيب الأرصدة\n/coins inventory — المشتريات\n\n**للإدارة**\n/store add و /store remove\n/e77-admin coins-add و coins-remove و coins-set\n\nعملة E77 نقاط افتراضية داخل السيرفر وليست أموالًا قابلة للسحب.')]});
+
   if(sub==='guide')return i.editReply({embeds:[panelEmbed()]});
   if(sub==='setup'){const {panel}=await hostingArea(i.guild);const msgs=await panel.messages.fetch({limit:10}).catch(()=>null);if(!msgs?.some(m=>m.author.id===i.client.user.id&&m.embeds[0]?.title==='E77 HOST | مركز الاستضافة'))await panel.send({embeds:[panelEmbed()]});return i.editReply({content:'تم تجهيز مركز الاستضافة: '+panel.toString()});}
   if(sub==='panel'){const ch=i.options.getChannel('channel',true);await ch.send({embeds:[panelEmbed()]});return i.editReply({content:'تم نشر لوحة الاستضافة في '+ch.toString()});}

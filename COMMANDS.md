@@ -1,7 +1,7 @@
 # E77 HOST — Discord command reference (v2.3.0)
 
 ## Customer commands
-- `/help`: Arabic command guide.
+- `/hosting help`: Arabic command guide.
 - `/hosting guide`: explains how to request hosting.
 - `/store browse`: lists published plans and services.
 - `/store buy item_id`: purchases an item. Hosting products open a private order channel after successful payment.
@@ -38,4 +38,4 @@ The bot needs only the permissions required by its enabled workflows, including 
 The existing bridge engine and durable idempotency state are preserved. Keep current FadeHost values for `DISCORD_TOKEN`, `EM7_CONTROL_BOT_BRIDGE_SECRET`, `EM7_CONTROL_URL` and the configured state path. Never put secrets in GitHub. Supported operations remain `create_rooms`, `create_channel`, `create_role`, `update_role` and `set_channel_permissions`.
 
 ## Deploy
-Repository: `em7ces9doze-cell/E77-HOST`, branch `main`. Node.js 22+. CI runs `npm run check` and `npm test`. Expected command log: `[COMMANDS] Registered 5 E77 HOST command groups.`
+Repository: `em7ces9doze-cell/E77-HOST`, branch `main`. Node.js 22+. CI runs `npm run check` and `npm test`. Expected command log: `[COMMANDS] Registered 4 E77 HOST command groups.`

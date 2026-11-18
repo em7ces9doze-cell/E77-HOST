@@ -5,11 +5,11 @@ const {PermissionFlagsBits}=require('discord.js');
 const {commands,ADMIN_ACTIONS}=require('../commands');
 const byName=new Map(commands.map(x=>[x.name,x]));
 test('E77 exposes four clear top-level command groups only',()=>{
- assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','help','hosting','store'].sort());
+ assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store'].sort());
 });
 test('hosting group contains setup, panel and guide actions',()=>{
  const names=byName.get('hosting').options.map(x=>x.name);
- assert.deepEqual(names,['setup','panel','guide']);
+ assert.deepEqual(names,['setup','panel','guide','help']);
 });
 test('store group separates customer and staff actions',()=>{
  const names=byName.get('store').options.map(x=>x.name);
@@ -26,4 +26,4 @@ test('admin group is Discord Administrator restricted',()=>{
  for(const name of ['hosting:setup','hosting:panel','store:add','store:remove'])assert.ok(ADMIN_ACTIONS.has(name));
 });
 
-test('help command is available as a top-level command',()=>{ assert.ok(byName.has('help')); });
+test('help is grouped under hosting rather than a separate top-level command',()=>{ assert.ok(byName.get('hosting').options.some(x=>x.name==='help')); });
