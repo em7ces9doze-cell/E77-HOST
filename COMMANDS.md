@@ -1,4 +1,4 @@
-# E77 HOST — Economy & Discord Bridge
+# E77 HOST — Hosting, Commerce, Economy & Discord Bridge
 
 ## Member economy commands
 - `/help`: complete command guide.
@@ -15,6 +15,14 @@
 - `/buy item_id`: buy a product and add it to inventory.
 - `/inventory [member]`: view purchased items.
 - `/profile [member]`: full economy profile.
+
+## Hosting and Embed commands
+- `/hosting-room`: administrator-only setup for the public hosting category and request information channel. It reuses the existing category/channel instead of duplicating them.
+- `/hosting-embed channel title description [color]`: administrator-only custom Embed publisher. Color accepts six hexadecimal characters; invalid colors are rejected.
+- `/hosting-buy item_id`: purchases an item configured in the server shop, then opens a private order room for the buyer, the bot, and Administrator roles. If payment fails, the unused room is deleted. Use hosting products only in this flow; ordinary shop items should continue using `/buy`.
+- `/coin-info`: explains the internal virtual coin, wallet/bank distinction, and transaction history. E77 coins are not cryptocurrency and have no cash value.
+
+The bot needs `Manage Channels` to set up hosting rooms and create private purchase rooms. The bot must also have `View Channel`, `Send Messages`, and `Read Message History`. Administrator roles are granted access to private order rooms.
 
 ## Administrator economy commands
 All staff commands require Discord Administrator both in command visibility and runtime authorization:
@@ -46,7 +54,7 @@ FadeHost should deploy from repository `em7ces9doze-cell/E77-HOST`, branch `main
 
 After deployment, confirm:
 1. `[READY] Discord client connected.`
-2. `[COMMANDS] Registered 19 E77 HOST economy commands.`
+2. `[COMMANDS] Registered 23 E77 HOST commands.`
 3. `[BRIDGE] worker_started` (when bridge credentials are correctly configured).
 4. Use `/help`, then test `/bank`, `/deposit`, `/withdraw`, and `/transactions` in a test server.
 
