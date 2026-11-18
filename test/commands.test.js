@@ -5,7 +5,7 @@ const {PermissionFlagsBits}=require('discord.js');
 const {commands,ADMIN_ACTIONS,executeCommand,storeEntryRow,productSelectRow,planSelectRow,orderModal}=require('../commands');
 const byName=new Map(commands.map(x=>[x.name,x]));
 test('E77 exposes five clear top-level command groups',()=>{
- assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store','رومات'].sort());
+ assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store','token','رومات'].sort());
 });
 test('store rooms command exposes administrator-only setup and settings',()=>{
  const roomCommand=byName.get('رومات');
@@ -72,4 +72,13 @@ test('interactive store offers all five plans and collects safe order identity f
  const modal=orderModal('guard','7d').toJSON();
  assert.equal(modal.custom_id,'e77:order:guard:7d');
  assert.deepEqual(modal.components.map(row=>row.components[0].custom_id),['bot_name','bot_username','guild_id']);
+});
+
+test('token vault command is administrator-only and creates a setup action',()=>{
+ const command=byName.get('token');
+ assert.equal(command.default_member_permissions,PermissionFlagsBits.Administrator.toString());
+ assert.deepEqual(command.options.map(x=>x.name),['setup']);
+ assert.ok(ADMIN_ACTIONS.has('token:setup'));
+ const row=require('../commands').tokenVaultRow().toJSON();
+ assert.deepEqual(row.components.map(x=>x.custom_id),['token:counts','token:add-owned','token:add-customer','token:audit']);
 });
