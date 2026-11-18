@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check bridge-engine.js && node --check commands.js",
+    "check": "node --check index.js && node --check bridge-engine.js && node --check commands.js && node --check economy-store.js",
     "test": "node --test"
   },
   "dependencies": {
