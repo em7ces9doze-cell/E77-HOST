@@ -24,7 +24,7 @@ function dashboard(){
   new ButtonBuilder().setCustomId('gb:work').setLabel('مهمة عمل').setEmoji('💼').setStyle(ButtonStyle.Secondary),
   new ButtonBuilder().setCustomId('gb:stocks').setLabel('تداول الشركات').setEmoji('📈').setStyle(ButtonStyle.Secondary),
   new ButtonBuilder().setCustomId('gb:challenge').setLabel('تحدي').setEmoji('🎯').setStyle(ButtonStyle.Secondary)
- ),new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('gb:dice').setLabel('نرد 100 خليج').setEmoji('🎲').setStyle(ButtonStyle.Primary))]};
+ ),new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId('gb:dice').setLabel('نرد مجاني').setEmoji('🎲').setStyle(ButtonStyle.Primary))]};
 }
 async function say(m,s){return m.reply({embeds:[em('بنك الخليج',s)]});}
 function stockBoard(){const rows=db.stockMarket();return em('📈 بورصة بنك الخليج',rows.map(x=>'**'+x.name+'** ('+x.symbol+')\n'+x.sector+' • '+money(x.price)+' '+(x.change>0?'🟢 +':x.change<0?'🔴 ':'⚪ ')+Math.abs(x.change)).join('\n\n')+'\n\nلبدء الشراء: **تداول 200** ثم اختر الشركة.\nللبيع: **بيع_سهم NAMA 2** (الرمز ثم عدد الأسهم).');}
@@ -34,11 +34,11 @@ function stockPicker(userId,budget){
  return {embeds:[em('اختيار الشركة','المبلغ المحدد: '+money(budget)+'\nاختر شركة واحدة من الشركات العشر. سيحسب البنك عدد الأسهم الممكن شراؤها ويعرض نتيجة العملية.')],components:[new ActionRowBuilder().addComponents(menu)]};
 }
 function view(action,id){
- if(action==='balance'){const a=db.balance(id);return em('💳 ملخص الحساب','**الرصيد المتاح:** '+money(a.balance)+'\n**حساب التوفير:** '+money(a.savings)+'\n**الثروة النقدية:** '+money(a.balance+a.savings)+'\n**المستوى:** '+(1+Math.floor(a.xp/100))+' • **XP:** '+a.xp);}
+ if(action==='balance'){const a=db.balance(id),shares=db.stockPortfolio(id).reduce((n,x)=>n+x.value,0),wealth=a.balance+a.savings+shares;return em('💳 ملخص الحساب','**الرصيد المتاح:** '+money(a.balance)+'\n**حساب التوفير:** '+money(a.savings)+'\n**قيمة الأسهم:** '+money(shares)+'\n**إجمالي الثروة:** '+money(wealth)+'\n**المستوى:** '+(1+Math.floor(a.xp/100))+' • **XP:** '+a.xp);}
  if(action==='daily'){const r=db.daily(id);return em('🎁 المكافأة اليومية',r.ok?'تم إيداع '+money(r.amount)+' في حسابك.':'المكافأة القادمة بعد **'+Math.ceil(r.remaining/3600000)+' ساعة** تقريبًا.');}
  if(action==='work'){const r=db.work(id);return em('💼 مركز العمل',r.ok?'**المهمة:** '+r.job+'\n**المكافأة:** '+money(r.amount):'لقد استخدمت فرصة العمل. عُد بعد **'+Math.ceil(r.remaining/60000)+' دقيقة**.');}
  if(action==='challenge'){const r=db.challenge(id);return em('🎯 التحديات اليومية',r.ok?'اكتمل تحدٍ! ربحت '+money(r.reward)+'.\nالمتبقي اليوم: '+r.remaining:'اكتملت تحديات اليوم الثلاثة.');}
- if(action==='dice'){const r=db.dice(id,100);return em('🎲 نرد بنك الخليج',!r.ok?'رصيدك لا يكفي للمشاركة.':'نتيجتك **'+r.player+'/10** مقابل **'+r.bank+'/10**\n'+(r.result==='win'?'**فزت!** ربحت 100 خليج.':r.result==='loss'?'**فاز البنك.** خسرت 100 خليج.':'**تعادل.** لا ربح ولا خسارة.')+'\nرصيدك الحالي: '+money(r.balance));}
+ if(action==='dice'){const r=db.dice(id);return em('🎲 نرد بنك الخليج',!r.ok?'رصيدك لا يكفي للمشاركة.':'نتيجتك **'+r.player+'/10** مقابل **'+r.bank+'/10**\n'+(r.result==='win'?'**فزت!** حصلت على نقطتي خبرة.':r.result==='loss'?'**فاز البنك هذه الجولة.** جرّب مرة أخرى.':'**تعادل!** لا تغيير في الرصيد.')+'\nرصيدك الحالي: '+money(r.balance));}
  if(action==='stocks')return stockBoard();
  if(action==='stockportfolio'){const rows=db.stockPortfolio(id);return em('📊 محفظة الأسهم',rows.length?rows.map(x=>'**'+x.name+'** ('+x.symbol+')\nالكمية: '+x.shares+' سهم • القيمة: '+money(x.value)+'\n'+(x.profit>=0?'🟢 ربح غير محقق: ':'🔴 خسارة غير محققة: ')+money(Math.abs(x.profit))).join('\n\n'):'لا تملك أسهمًا حاليًا. اكتب تداول 200 للبدء.');}
  if(action==='market'){const s=Object.entries(db.market).map(([k,v])=>'**'+k+'** — '+v.name+': '+money(v.price)).join('\n');return em('🏪 سوق الأصول الافتراضية',s+'\n\n+شراء GOLD 2 • +بيع GOLD 1');}
@@ -66,7 +66,7 @@ async function handleMessage(m){
  if(c==='+مساعدة')return say(m,'لوحة البنك: +بنك • +تفعيل (للمشرف مرة واحدة)\nتداول 200 — اختر شركة من القائمة لشراء الأسهم\nبيع_سهم NAMA 2 — بيع سهمين من شركة نماء\n+رصيدي • +يومي • +عمل • +نرد 100\n+تحويل @عضو 100 • +ايداع 100 • +سحب 100\n+السوق • +شراء GOLD 2 • +بيع GOLD 1\n+محفظتي • +سجل • +تحدي • +اغنياء');
  if(c==='+رصيدي'||c==='+حسابي')return say(m,'رصيدك المتاح: '+money(db.balance(id).balance));
  if(c==='+يومي'||c==='+عمل'||c==='+تحدي'){const a=c==='+يومي'?'daily':c==='+عمل'?'work':'challenge';return m.reply({embeds:[view(a,id)]});}
- if(c==='+نرد'){const r=db.dice(id,p[1]||100);if(!r.ok)return say(m,r.reason==='LOW'?'رصيدك لا يكفي.':'حدد رهانًا صحيحًا.');return say(m,'🎲 نتيجتك **'+r.player+'/10** مقابل **'+r.bank+'/10**\n'+(r.result==='win'?'فزت وربحت قيمة الرهان!':r.result==='loss'?'فاز البنك.':'تعادل؛ لا ربح ولا خسارة.')+'\nرصيدك: '+money(r.balance));}
+ if(c==='+نرد'){const r=db.dice(id);return say(m,'🎲 نتيجتك **'+r.player+'/10** مقابل **'+r.bank+'/10**\n'+(r.result==='win'?'فزت! حصلت على نقطتي خبرة.':r.result==='loss'?'فاز البنك هذه الجولة.':'تعادل! لا تغيير في الرصيد.')+'\nرصيدك: '+money(r.balance));}
  if(c==='+تحويل'){const u=m.mentions.users.first(),n=p.find((v,i)=>i>0&&/^\d+$/.test(v)),r=db.transfer(id,u?.id,n);return say(m,r.ok?'تم التحويل. رصيدك '+money(r.balance):'تعذر التحويل؛ تحقق من العضو والمبلغ والرصيد.');}
  if(c==='+ايداع'||c==='+سحب'){const r=db.savings(id,c==='+ايداع'?'in':'out',p[1]);return say(m,r.ok?'تمت العملية. الرصيد '+money(r.account.balance)+' | التوفير '+money(r.account.savings):'المبلغ غير صحيح أو الرصيد غير كافٍ.');}
  if(c==='+السوق')return m.reply({embeds:[view('market',id)]});
