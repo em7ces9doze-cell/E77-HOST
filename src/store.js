@@ -13,6 +13,6 @@ async function add(g,u,file){const p=active(g,u);if(!p)throw Error("No active pr
 async function removeLast(g,u){const p=active(g,u);if(!p?.frames.length)throw Error("No frames");const f=p.frames.pop();await fs.unlink(f.path).catch(()=>{});p.updatedAt=new Date().toISOString();await persist();return structuredClone(p);}
 async function setAudio(g,u,file){const p=active(g,u);if(!p)throw Error("No active project");if(p.audio)await fs.unlink(p.audio).catch(()=>{});p.audio=file;p.updatedAt=new Date().toISOString();await persist();}
 async function settings(g,u,f,v){const p=active(g,u),valid={fps:[6,8,10,12,15,24],quality:[480,720,1080],aspect:["landscape","portrait","square"]};if(!p||!valid[f]||!valid[f].includes(f==="aspect"?v:Number(v)))throw Error("Invalid setting");p.settings[f]=f==="aspect"?v:Number(v);p.updatedAt=new Date().toISOString();await persist();return structuredClone(p);}
-async function list(g,u){return Object.values(state.projects).filter(p=>p.guildId===(g||"dm")&&p.ownerId===u).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).map(structuredClone);}
+async function list(g,u){return Object.values(state.projects).filter(p=>p.guildId===(g||"dm")&&p.ownerId===u).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).map(p=>structuredClone(p));}
 async function exported(g,u){const p=active(g,u);if(p){p.exports++;await persist();}}
 module.exports={ensure,persist,create,get,add,removeLast,setAudio,settings,list,exported,framePath,audioPath};
