@@ -1,6 +1,6 @@
 {
   "name": "e77-host-bot",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "description": "E77 Discord bot - single-file deployment for FadeHost",
   "main": "index.js",

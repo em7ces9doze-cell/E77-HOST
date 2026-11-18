@@ -3,6 +3,7 @@ const {SlashCommandBuilder,EmbedBuilder,PermissionFlagsBits,ChannelType}=require
 const economy=require('./economy-store');
 const ADMIN=PermissionFlagsBits.Administrator;
 const commands=[
+ new SlashCommandBuilder().setName('help').setDescription('دليل استخدام بوت E77 HOST'),
  new SlashCommandBuilder().setName('hosting').setDescription('مركز خدمات الاستضافة')
   .addSubcommand(s=>s.setName('setup').setDescription('إنشاء قسم ولوحة الاستضافة'))
   .addSubcommand(s=>s.setName('panel').setDescription('نشر لوحة الاستضافة في روم').addChannelOption(o=>o.setName('channel').setDescription('الروم').addChannelTypes(ChannelType.GuildText).setRequired(true)))
@@ -19,7 +20,10 @@ const commands=[
   .addSubcommand(s=>s.setName('transfer').setDescription('تحويل عملات لعضو').addUserOption(o=>o.setName('member').setDescription('المستلم').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
   .addSubcommand(s=>s.setName('deposit').setDescription('إيداع في البنك').addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
   .addSubcommand(s=>s.setName('withdraw').setDescription('سحب من البنك').addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
-  .addSubcommand(s=>s.setName('history').setDescription('آخر معاملاتك')),
+  .addSubcommand(s=>s.setName('history').setDescription('آخر معاملاتك'))
+  .addSubcommand(s=>s.setName('profile').setDescription('ملفك الاقتصادي').addUserOption(o=>o.setName('member').setDescription('عرض ملف عضو آخر')))
+  .addSubcommand(s=>s.setName('leaderboard').setDescription('ترتيب أعلى الأرصدة في السيرفر'))
+  .addSubcommand(s=>s.setName('inventory').setDescription('عرض مشترياتك').addUserOption(o=>o.setName('member').setDescription('عرض مشتريات عضو آخر'))),
  new SlashCommandBuilder().setName('e77-admin').setDescription('إدارة العملة والمنتجات').setDefaultMemberPermissions(ADMIN)
   .addSubcommand(s=>s.setName('coins-add').setDescription('إضافة رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
   .addSubcommand(s=>s.setName('coins-remove').setDescription('خصم رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
@@ -55,6 +59,10 @@ async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
  const group=i.commandName,sub=i.options.getSubcommand(),key=group+':'+sub,g=i.guildId,u=i.user.id;
  if(ADMIN_ACTIONS.has(key)&&!isAdmin(i))return i.editReply({content:'هذا الإجراء مخصص للإدارة.'});
+ if(group==='help'){
+  return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
+   '**الاستضافة**\n/hosting guide — دليل الطلب\n/hosting setup — تجهيز المركز (الإدارة)\n/hosting panel — نشر اللوحة\n\n**المتجر**\n/store browse — عرض الخدمات\n/store buy — شراء منتج\n\n**العملة E77**\n/coins balance — رصيدك\n/coins daily — المكافأة اليومية\n/coins work — مكافأة العمل\n/coins transfer — تحويل\n/coins deposit و /coins withdraw — البنك\n/coins history — سجل العمليات\n/coins profile — الملف الاقتصادي\n/coins leaderboard — ترتيب الأرصدة\n/coins inventory — المشتريات\n\n**للإدارة**\n/store add و /store remove\n/e77-admin coins-add و coins-remove و coins-set\n\nعملة E77 نقاط افتراضية داخل السيرفر وليست أموالًا قابلة للسحب.')]});
+ }
  if(group==='hosting'){
   if(sub==='guide')return i.editReply({embeds:[panelEmbed()]});
   if(sub==='setup'){const {panel}=await hostingArea(i.guild);const msgs=await panel.messages.fetch({limit:10}).catch(()=>null);if(!msgs?.some(m=>m.author.id===i.client.user.id&&m.embeds[0]?.title==='E77 HOST | مركز الاستضافة'))await panel.send({embeds:[panelEmbed()]});return i.editReply({content:'تم تجهيز مركز الاستضافة: '+panel.toString()});}
@@ -77,12 +85,29 @@ async function executeCommand(i){
   if(sub==='transfer'){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.editReply({content:'لا يمكن التحويل إلى بوت.'});const r=await economy.transfer(g,u,target.id,amount);return i.editReply({embeds:[makeEmbed('تم التحويل','المستلم: '+target+'\nالمبلغ: **'+fmt(amount)+' E77**\nرصيدك: **'+fmt(r.from)+' E77**')]});}
   if(sub==='deposit'||sub==='withdraw'){const r=await economy[sub](g,u,i.options.getInteger('amount',true));return i.editReply({embeds:[makeEmbed(sub==='deposit'?'تم الإيداع':'تم السحب','المحفظة: **'+fmt(r.balance)+' E77**\nالبنك: **'+fmt(r.bank)+' E77**')]});}
   if(sub==='history'){const rows=await economy.transactions(g,u,10),labels={daily:'مكافأة يومية',work:'مكافأة نشاط',transfer_in:'تحويل وارد',transfer_out:'تحويل صادر',purchase:'شراء',deposit:'إيداع',withdraw:'سحب',admin_add:'إضافة إدارية',admin_remove:'خصم إداري',admin_set:'تعديل إداري'};const text=rows.length?rows.map(x=>'**'+(labels[x.type]||'عملية')+'** · '+fmt(x.amount)+' E77\n<t:'+Math.floor(x.at/1000)+':R>').join('\n\n'):'لا توجد معاملات.';return i.editReply({embeds:[makeEmbed('سجل محفظتك',text)]});}
+  if(sub==='profile'){
+   const target=i.options.getUser('member')||i.user;
+   const a=await economy.balance(g,target.id);
+   return i.editReply({embeds:[makeEmbed('الملف الاقتصادي · '+target.username,
+    'المحفظة: **'+fmt(a.balance)+' E77**\nالبنك: **'+fmt(a.bank)+' E77**\nالإجمالي: **'+fmt(a.balance+a.bank)+' E77**\n\nإجمالي المكتسب: **'+fmt(a.totalEarned||0)+' E77**\nإجمالي المصروف: **'+fmt(a.totalSpent||0)+' E77**')]});
+  }
+  if(sub==='leaderboard'){
+   const rows=await economy.leaderboard(g);
+   const body=rows.length?rows.map((x,n)=>'**'+(n+1)+'.** <@'+x.id+'> — **'+fmt(x.total)+' E77**').join('\n'):'لا توجد أرصدة مسجلة بعد.';
+   return i.editReply({embeds:[makeEmbed('🏆 ترتيب اقتصاد E77',body)]});
+  }
+  if(sub==='inventory'){
+   const target=i.options.getUser('member')||i.user;
+   const rows=await economy.inventory(g,target.id);
+   const body=rows.length?rows.slice(-10).reverse().map((x,n)=>'**'+(n+1)+'. '+x.name+'**\n'+(Number.isFinite(x.boughtAt)?'<t:'+Math.floor(x.boughtAt/1000)+':R>':'تاريخ الشراء غير متاح')).join('\n\n'):'لا توجد مشتريات مسجلة.';
+   return i.editReply({embeds:[makeEmbed('مشتريات '+target.username,body)]});
+  }
  }
  if(group==='e77-admin'){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.editReply({content:'لا يمكن تعديل رصيد بوت.'});const mode={'coins-add':'add','coins-remove':'remove','coins-set':'set'}[sub];const r=await economy.adminAdjust(g,target.id,amount,mode);return i.editReply({content:'تم تحديث رصيد '+target+' إلى '+fmt(r.balance)+' E77.'});}
 }
 async function handleInteraction(i){
  if(!i.isChatInputCommand())return;
- await i.deferReply({ephemeral:true}).catch(()=>{});
+ await i.deferReply({ephemeral:!(i.commandName==='coins'&&i.options.getSubcommand()==='leaderboard')}).catch(()=>{});
  try{await executeCommand(i);}catch(e){const messages={NEED_CHANNEL_PERMISSION:'يحتاج البوت إلى صلاحية Manage Channels.',ORDER_EXISTS:'لديك طلب مفتوح لهذه الباقة بالفعل.',INVALID_AMOUNT:'المبلغ غير صالح.',SAME_USER:'لا يمكنك التحويل لنفسك.',INSUFFICIENT_FUNDS:'رصيدك غير كافٍ.',INSUFFICIENT_BANK_FUNDS:'رصيد البنك غير كافٍ.',BALANCE_LIMIT:'وصل الرصيد إلى الحد الآمن.',ITEM_EXISTS:'معرف المنتج أو اسمه مستخدم.',ITEM_NOT_FOUND:'المنتج غير موجود.'};await i.editReply({content:messages[e.message]||'تعذر تنفيذ العملية. حاول لاحقًا أو تواصل مع الإدارة.'}).catch(()=>{});console.error('[E77] '+i.commandName+' failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));}
 }
 async function registerCommands(client){if(!client.application?.commands)throw Error('APPLICATION_NOT_READY');const id=process.env.DISCORD_GUILD_ID;const result=await client.application.commands.set(commands,id||undefined);console.log('[COMMANDS] Registered '+result.size+' E77 HOST command groups.');}
