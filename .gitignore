@@ -4,3 +4,6 @@ node_modules/
 .em7-bridge-state.json.*.tmp
 data/store-settings.json
 data/store-settings.json.*.tmp
+
+data/token-vault.enc
+data/token-vault.enc.*.tmp
