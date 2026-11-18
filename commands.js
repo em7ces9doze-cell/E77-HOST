@@ -40,11 +40,13 @@ commands.push(
   adminCommand('nickname', 'تغيير اسم عضو داخل السيرفر').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addStringOption(o => o.setName('name').setDescription('الاسم الجديد؛ اتركه فارغًا لإزالة الاسم المستعار').setMaxLength(32).setRequired(false)).toJSON(),
   adminCommand('createchannel', 'إنشاء قناة نصية أو صوتية').addStringOption(o => o.setName('name').setDescription('اسم القناة').setMaxLength(90).setRequired(true)).addStringOption(o => o.setName('type').setDescription('نوع القناة').addChoices({ name: 'نصية', value: 'text' }, { name: 'صوتية', value: 'voice' }).setRequired(true)).toJSON(),
   adminCommand('createrole', 'إنشاء رتبة بلون محدد').addStringOption(o => o.setName('name').setDescription('اسم الرتبة').setMaxLength(100).setRequired(true)).addStringOption(o => o.setName('color').setDescription('لون Hex مثل #8b5cf6').setRequired(false)).toJSON(),
+  adminCommand('addrole', 'إسناد رتبة إلى عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addRoleOption(o => o.setName('role').setDescription('الرتبة').setRequired(true)).toJSON(),
+  adminCommand('removerole', 'إزالة رتبة من عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addRoleOption(o => o.setName('role').setDescription('الرتبة').setRequired(true)).toJSON(),
 );
 
 const ADMIN_COMMANDS = new Set([
   'clear', 'slowmode', 'lock', 'unlock', 'announce', 'kick', 'ban',
-  'timeout', 'untimeout', 'nickname', 'createchannel', 'createrole',
+  'timeout', 'untimeout', 'nickname', 'createchannel', 'createrole', 'addrole', 'removerole',
 ]);
 
 function hasPermission(interaction, permission) {
@@ -186,8 +188,11 @@ async function executeCommand(interaction) {
   }
 
   if (name === 'announce') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.SendMessages)) return;
     const channel = interaction.options.getChannel('channel', true);
+    const botMember = interaction.guild.members.me || await interaction.guild.members.fetchMe();
+    if (!channel.permissionsFor(botMember)?.has(PermissionFlagsBits.SendMessages)) {
+      return interaction.reply({ content: 'البوت لا يملك صلاحية إرسال الرسائل في قناة الإعلان المحددة.', ephemeral: true });
+    }
     const message = interaction.options.getString('message', true);
     await channel.send({ embeds: [makeEmbed('إعلان السيرفر', message)], allowedMentions: { parse: [] } });
     return interaction.reply({ content: `تم نشر الإعلان في ${channel}.`, ephemeral: true });
@@ -246,6 +251,20 @@ async function executeCommand(interaction) {
       reason: `E7 BOT by ${interaction.user.tag}`,
     });
     return interaction.reply({ content: `تم إنشاء القناة ${channel} بنجاح.`, ephemeral: true });
+  }
+
+  if (name === 'addrole' || name === 'removerole') {
+    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageRoles)) return;
+    const user = interaction.options.getUser('member', true);
+    const role = interaction.options.getRole('role', true);
+    const member = await interaction.guild.members.fetch(user.id);
+    const botMember = interaction.guild.members.me || await interaction.guild.members.fetchMe();
+    if (role.managed || role.id === interaction.guild.id || role.position >= botMember.roles.highest.position) {
+      return interaction.reply({ content: 'ترتيب الرتبة أو حالتها يمنع البوت من إدارتها.', ephemeral: true });
+    }
+    if (name === 'addrole') await member.roles.add(role, `E7 BOT by ${interaction.user.tag}`);
+    else await member.roles.remove(role, `E7 BOT by ${interaction.user.tag}`);
+    return interaction.reply({ content: name === 'addrole' ? `تم إسناد ${role} إلى **${user.tag}**.` : `تمت إزالة ${role} من **${user.tag}**.`, ephemeral: true });
   }
 
   if (name === 'createrole') {
