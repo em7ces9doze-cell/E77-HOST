@@ -11,6 +11,8 @@ await store.add(g,u,a,"first.jpg");await store.add(g,u,b,"second.png");await sto
 let current=await store.get(g,u);assert.equal(current.frames.length,3);assert.equal(current.frames[0].name,"first.jpg");
 current=await store.moveFrame(g,u,3,1);assert.equal(current.frames[0].path,c);
 current=await store.setFrameDuration(g,u,1,0.75);assert.equal(current.frames[0].durationSec,0.75);
+current=await store.duplicateFrame(g,u,1,2);assert.equal(current.frames.length,4);assert.notEqual(current.frames[1].path,c);assert.equal(current.frames[1].durationSec,0.75);assert.equal(await fs.readFile(current.frames[1].path,"utf8"),"c");
+current=await store.removeFrame(g,u,2);assert.equal(current.frames.length,3);
 await assert.rejects(store.setFrameDuration(g,u,1,8),/Invalid frame duration/);
 current=await store.settings(g,u,"fps","24");assert.equal(current.settings.fps,24);
 current=await store.settings(g,u,"quality","1080");assert.equal(current.settings.quality,1080);
