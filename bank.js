@@ -2,8 +2,8 @@
 const {EmbedBuilder,ActionRowBuilder,ButtonBuilder,ButtonStyle,StringSelectMenuBuilder,PermissionFlagsBits}=require('discord.js');
 const db=require('./bank-store');
 const NAV='gb:',LOGO='https://raw.githubusercontent.com/em7ces9doze-cell/E77-HOST/main/assets/gulf-bank-logo.svg';
-const GOLD=0xC69A4A;
-const money=n=>'🪙 **'+Number(n||0).toLocaleString('en-US')+' خليج**';
+const GOLD=0xC69A4A,COIN=process.env.GULF_COIN_EMOJI||'🪙';
+const money=n=>COIN+' **'+Number(n||0).toLocaleString('en-US')+' خليج**';
 const em=(title,description)=>new EmbedBuilder().setColor(GOLD).setTitle(title).setDescription(description).setThumbnail(LOGO).setFooter({text:'GULF BANK • عملة الخليج الافتراضية'}).setTimestamp();
 function dashboard(){
  const menu=new StringSelectMenuBuilder().setCustomId('gb:navigate').setPlaceholder('اختر خدمة من بنك الخليج').addOptions(
