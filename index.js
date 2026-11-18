@@ -10,7 +10,7 @@ const server=http.createServer((req,res)=>{
  const pathname=(req.url||'/').split('?')[0];
  if(pathname==='/health'){res.writeHead(200,{'content-type':'application/json; charset=utf-8','cache-control':'no-store'});res.end(JSON.stringify({success:true,service:'Gulf Bank',status:client.isReady()?'online':'starting',world:'available'}));return;}
  let decoded;try{decoded=decodeURIComponent(pathname);}catch{res.writeHead(400);res.end('Bad Request');return;}
- const relative=decoded==='/'?'index.html':decoded.replace(/^\\/+/,''),root=decoded.startsWith('/assets/')?path.resolve(__dirname):PUBLIC_DIR,file=path.resolve(root,relative);
+ const relative=decoded==='/'?'index.html':decoded.replace(/^[/]+/,''),root=decoded.startsWith('/assets/')?path.resolve(__dirname):PUBLIC_DIR,file=path.resolve(root,relative);
  if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);res.end('Forbidden');return;}
  fs.stat(file,(err,stat)=>{if(err||!stat.isFile()){res.writeHead(404,{'content-type':'text/plain; charset=utf-8'});res.end('Not Found');return;}
   const type=TYPES[path.extname(file).toLowerCase()]||'application/octet-stream';res.writeHead(200,{'content-type':type,'x-content-type-options':'nosniff','cache-control':path.extname(file)==='.html'?'no-cache':'public, max-age=300'});fs.createReadStream(file).pipe(res);
