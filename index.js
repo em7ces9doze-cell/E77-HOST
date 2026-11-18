@@ -70,7 +70,7 @@ function startBridgeWorker() {
   }
 }
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log('[READY] Discord client connected.');
   registerCommands(client).catch(error => {
     const code = typeof error?.code === 'number' || typeof error?.code === 'string'

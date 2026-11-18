@@ -82,6 +82,11 @@ function safeAmount(value) {
   if (!Number.isSafeInteger(value) || value <= 0 || value > 1000000000) throw new Error('INVALID_AMOUNT');
   return value;
 }
+function safeAdd(current, amount) {
+  const next = current + amount;
+  if (!Number.isSafeInteger(next) || next < 0) throw new Error('BALANCE_LIMIT');
+  return next;
+}
 
 module.exports = {
   STARTING_BALANCE, DAILY_REWARD, WORK_MIN, WORK_MAX, DAILY_COOLDOWN, WORK_COOLDOWN,
@@ -90,7 +95,8 @@ module.exports = {
     const guild=ensureGuild(s,g), user=ensureUser(guild,u), now=Date.now();
     const remaining=DAILY_COOLDOWN-(now-user.dailyAt);
     if (user.dailyAt && remaining>0) return { ok:false, remaining };
-    user.dailyAt=now; user.balance+=DAILY_REWARD; user.totalEarned+=DAILY_REWARD;
+    const nextBalance = safeAdd(user.balance, DAILY_REWARD);
+    user.dailyAt=now; user.balance=nextBalance; user.totalEarned=safeAdd(user.totalEarned || 0, DAILY_REWARD);
     record(guild,'daily',u,DAILY_REWARD,'Daily reward');
     return { ok:true, amount:DAILY_REWARD, balance:user.balance };
   }),
@@ -99,7 +105,8 @@ module.exports = {
     const remaining=WORK_COOLDOWN-(now-user.workAt);
     if (user.workAt && remaining>0) return { ok:false, remaining };
     const amount=WORK_MIN+Math.floor(Math.random()*(WORK_MAX-WORK_MIN+1));
-    user.workAt=now; user.balance+=amount; user.totalEarned+=amount;
+    const nextBalance = safeAdd(user.balance, amount);
+    user.workAt=now; user.balance=nextBalance; user.totalEarned=safeAdd(user.totalEarned || 0, amount);
     record(guild,'work',u,amount,'Work reward');
     return { ok:true, amount, balance:user.balance };
   }),
@@ -108,10 +115,31 @@ module.exports = {
     if (from===to) throw new Error('SAME_USER');
     const guild=ensureGuild(s,g), a=ensureUser(guild,from), b=ensureUser(guild,to);
     if (a.balance<amount) throw new Error('INSUFFICIENT_FUNDS');
-    a.balance-=amount; b.balance+=amount;
+    const recipientBalance = safeAdd(b.balance, amount);
+    a.balance-=amount; b.balance=recipientBalance;
     record(guild,'transfer_out',from,amount,to); record(guild,'transfer_in',to,amount,from);
     return { from:a.balance, to:b.balance };
   }),
+  deposit: (g,u,amount) => mutate(s => {
+    safeAmount(amount);
+    const guild=ensureGuild(s,g), user=ensureUser(guild,u);
+    if(user.balance<amount) throw new Error('INSUFFICIENT_FUNDS');
+    const bank=safeAdd(user.bank,amount);
+    user.balance-=amount; user.bank=bank;
+    record(guild,'deposit',u,amount,'Wallet to bank');
+    return {balance:user.balance,bank:user.bank};
+  }),
+  withdraw: (g,u,amount) => mutate(s => {
+    safeAmount(amount);
+    const guild=ensureGuild(s,g), user=ensureUser(guild,u);
+    if(user.bank<amount) throw new Error('INSUFFICIENT_BANK_FUNDS');
+    const balance=safeAdd(user.balance,amount);
+    user.bank-=amount; user.balance=balance;
+    record(guild,'withdraw',u,amount,'Bank to wallet');
+    return {balance:user.balance,bank:user.bank};
+  }),
+  transactions: (g,u,limit=10) => read(s => ensureGuild(s,g).transactions
+    .filter(entry=>entry.userId===u).slice(0,Math.max(1,Math.min(25,limit))).map(entry=>({...entry}))),
   leaderboard: (g) => read(s => {
     const guild=ensureGuild(s,g);
     return Object.entries(guild.users).map(([id,u])=>({id,balance:u.balance,bank:u.bank,total:u.balance+u.bank,totalEarned:u.totalEarned||0}))
@@ -132,7 +160,8 @@ module.exports = {
     const guild=ensureGuild(s,g), user=ensureUser(guild,u), item=guild.shop.find(x=>x.id===id);
     if(!item) throw new Error('ITEM_NOT_FOUND');
     if(user.balance<item.price) throw new Error('INSUFFICIENT_FUNDS');
-    user.balance-=item.price; user.totalSpent=(user.totalSpent||0)+item.price; user.inventory.push({id:item.id,name:item.name,boughtAt:Date.now()});
+    const totalSpent=safeAdd(user.totalSpent||0,item.price);
+    user.balance-=item.price; user.totalSpent=totalSpent; user.inventory.push({id:item.id,name:item.name,boughtAt:Date.now()});
     record(guild,'purchase',u,item.price,item.name);
     return {item,balance:user.balance};
   }),
@@ -141,7 +170,7 @@ module.exports = {
     if (mode === 'set') { if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000) throw new Error('INVALID_AMOUNT'); }
     else safeAmount(amount);
     const guild=ensureGuild(s,g), user=ensureUser(guild,u);
-    if(mode==='add'){user.balance+=amount;user.totalEarned+=amount;}
+    if(mode==='add'){user.balance=safeAdd(user.balance,amount);user.totalEarned=safeAdd(user.totalEarned||0,amount);}
     else if(mode==='remove'){if(user.balance<amount)throw new Error('INSUFFICIENT_FUNDS');user.balance-=amount;}
     else if(mode==='set'){user.balance=amount;}
     record(guild,'admin_'+mode,u,amount,'Administrator adjustment');

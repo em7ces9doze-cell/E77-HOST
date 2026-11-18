@@ -8,7 +8,7 @@ const { commands, ADMIN_COMMANDS } = require('../commands');
 test('E7 HOST economy slash commands are unique', () => {
   const names = commands.map(command => command.name);
   assert.equal(new Set(names).size, names.length);
-  assert.ok(names.length >= 15);
+  assert.equal(names.length, 19);
 });
 
 test('economy administration commands require Administrator', () => {
@@ -21,7 +21,7 @@ test('economy administration commands require Administrator', () => {
 
 test('member economy commands are available without admin restriction', () => {
   const byName = new Map(commands.map(command => [command.name, command]));
-  for (const name of ['help','balance','daily','work','pay','leaderboard','shop','buy','inventory','profile']) {
+  for (const name of ['help','balance','bank','deposit','withdraw','transactions','daily','work','pay','leaderboard','shop','buy','inventory','profile']) {
     assert.ok(byName.has(name), 'Missing command: '+name);
     assert.equal(byName.get(name).default_member_permissions, undefined);
   }
