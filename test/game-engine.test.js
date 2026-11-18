@@ -26,7 +26,7 @@ test('requires at least two players and prevents lobby edits after start', () =>
   assert.equal(engine.addPlayer(game, 'u3').reason, 'GAME_STARTED');
 });
 
-test('only the selected chooser can eliminate another active player', () => {
+test('only the selected chooser can eliminate another active player until one winner remains', () => {
   const game = engine.createSession({ guildId: 'g1', channelId: 'c1', hostId: 'u1' });
   engine.addPlayer(game, 'u2');
   engine.addPlayer(game, 'u3');
@@ -34,9 +34,14 @@ test('only the selected chooser can eliminate another active player', () => {
   assert.equal(engine.choosePlayer(game, () => 0), 'u1');
   assert.equal(engine.eliminatePlayer(game, 'u2', 'u3').reason, 'NOT_CURRENT_CHOOSER');
   assert.equal(engine.eliminatePlayer(game, 'u1', 'u1').reason, 'CANNOT_CHOOSE_SELF');
-  const result = engine.eliminatePlayer(game, 'u1', 'u2');
-  assert.equal(result.ok, true);
+  const first = engine.eliminatePlayer(game, 'u1', 'u2');
+  assert.equal(first.ok, true);
+  assert.equal(game.players.length, 2);
+  assert.equal(game.status, 'playing');
+  assert.equal(engine.choosePlayer(game, () => 0), 'u1');
+  const final = engine.eliminatePlayer(game, 'u1', 'u3');
+  assert.equal(final.ok, true);
   assert.equal(game.players.length, 1);
   assert.equal(game.status, 'finished');
-  assert.equal(result.winnerId, 'u3');
+  assert.equal(final.winnerId, 'u1');
 });
