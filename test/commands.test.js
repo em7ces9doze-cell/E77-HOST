@@ -5,26 +5,31 @@ const assert = require('node:assert/strict');
 const { PermissionFlagsBits } = require('discord.js');
 const { commands, ADMIN_COMMANDS } = require('../commands');
 
-test('slash command names are unique and command catalog is substantial', () => {
+test('E7 HOST economy slash commands are unique', () => {
   const names = commands.map(command => command.name);
   assert.equal(new Set(names).size, names.length);
-  assert.ok(names.length >= 20);
+  assert.ok(names.length >= 15);
 });
 
-test('every administrative command is hidden behind Administrator permission', () => {
+test('economy administration commands require Administrator', () => {
   const byName = new Map(commands.map(command => [command.name, command]));
-  assert.ok(ADMIN_COMMANDS.size >= 12);
+  assert.deepEqual([...ADMIN_COMMANDS].sort(), ['coinsadd','coinsremove','coinsset','shopadd','shopremove'].sort());
   for (const name of ADMIN_COMMANDS) {
-    const command = byName.get(name);
-    assert.ok(command, `Missing command definition: ${name}`);
-    assert.equal(command.default_member_permissions, PermissionFlagsBits.Administrator.toString());
+    assert.equal(byName.get(name).default_member_permissions, PermissionFlagsBits.Administrator.toString());
   }
 });
 
-test('member commands remain available without default administrator restriction', () => {
+test('member economy commands are available without admin restriction', () => {
   const byName = new Map(commands.map(command => [command.name, command]));
-  for (const name of ['help', 'ping', 'botinfo', 'serverinfo', 'userinfo', 'avatar', 'roleinfo', 'channelinfo', 'poll']) {
-    assert.ok(byName.has(name), `Missing member command: ${name}`);
+  for (const name of ['help','balance','daily','work','pay','leaderboard','shop','buy','inventory','profile']) {
+    assert.ok(byName.has(name), 'Missing command: '+name);
     assert.equal(byName.get(name).default_member_permissions, undefined);
+  }
+});
+
+test('generic moderation commands are not part of the E7 HOST economy product', () => {
+  const names = new Set(commands.map(command => command.name));
+  for (const name of ['kick','ban','timeout','clear','slowmode','createchannel','createrole']) {
+    assert.equal(names.has(name), false);
   }
 });
