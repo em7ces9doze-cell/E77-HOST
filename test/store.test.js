@@ -17,7 +17,7 @@ current=await store.settings(g,u,"quality","1080");assert.equal(current.settings
 current=await store.settings(g,u,"aspect","portrait");assert.equal(current.settings.aspect,"portrait");
 current=await store.rename(g,u,"Edited film");assert.equal(current.name,"Edited film");
 current=await store.removeFrame(g,u,2);assert.equal(current.frames.length,2);
-assert.equal(await fs.stat(b).then(()=>true,()=>false),false);
+assert.equal(await fs.stat(a).then(()=>true,()=>false),false);
 assert.equal((await store.list(g,u)).length,1);
 await store.setDashboard(g,u,"channel-test","message-test");
 assert.equal(await store.getDashboard(g,u,"channel-test"),"message-test");
