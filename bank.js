@@ -35,7 +35,7 @@ function gamesPanel(){const components=[new ActionRowBuilder().addComponents(
  new ButtonBuilder().setCustomId('gb:challenge').setLabel('التحديات').setEmoji('🏆').setStyle(ButtonStyle.Success),
  new ButtonBuilder().setCustomId('gb:memory').setLabel('تحدي الذاكرة').setEmoji('🧠').setStyle(ButtonStyle.Secondary)
  )];
- if(process.env.PUBLIC_BASE_URL)components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('افتح مدينة 3D').setURL(process.env.PUBLIC_BASE_URL.replace(/\\/$/,''))));
+ if(process.env.PUBLIC_BASE_URL)components.push(new ActionRowBuilder().addComponents(new ButtonBuilder().setStyle(ButtonStyle.Link).setLabel('افتح مدينة 3D').setURL(process.env.PUBLIC_BASE_URL.replace(/\/$/,''))));
  return{embeds:[gamesGuide()],components};}
 function stockBoard(){const rows=db.stockMarket();return em('📈 بورصة بنك الخليج',rows.map(x=>'**'+x.name+'** ('+x.symbol+')\n'+x.sector+' • '+money(x.price)+' '+(x.change>0?'🟢 +':x.change<0?'🔴 ':'⚪ ')+Math.abs(x.change)).join('\n\n')+'\n\nلبدء الشراء: **تداول 200** ثم اختر الشركة.\nللبيع: **بيع_سهم NAMA 2**.');}
 function stockPicker(userId,budget){const rows=db.stockMarket();const menu=new StringSelectMenuBuilder().setCustomId('gb:stockpick:'+userId+':'+budget).setPlaceholder('اختر الشركة التي تريد شراء أسهمها').addOptions(rows.map(x=>({label:x.name.slice(0,100),value:x.symbol,description:x.symbol+' • '+x.sector+' • '+x.price+' خليج'})));return{embeds:[em('اختيار الشركة','المبلغ المحدد: '+money(budget)+'\nاختر شركة واحدة من الشركات العشر. سيحسب البنك عدد الأسهم الممكن شراؤها.')],components:[new ActionRowBuilder().addComponents(menu)]};}
