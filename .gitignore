@@ -1,4 +1,5 @@
 node_modules/
-.em7-bridge/
-.em7-bridge-state.json
-.em7-bridge-state.json.*.tmp
+.env
+.env.*
+data/
+*.log

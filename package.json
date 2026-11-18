@@ -1,19 +1,15 @@
 {
-  "name": "e77-host-bot",
-  "version": "2.3.0",
+  "name": "e77-games",
+  "version": "1.0.0",
   "private": true,
-  "description": "E77 Discord bot - single-file deployment for FadeHost",
+  "description": "E77 GAMES - Arabic multiplayer Discord games bot",
   "main": "index.js",
   "type": "commonjs",
-  "engines": {
-    "node": ">=22.0.0"
-  },
+  "engines": { "node": ">=22.0.0" },
   "scripts": {
     "start": "node index.js",
-    "check": "node --check index.js && node --check bridge-engine.js && node --check commands.js && node --check economy-store.js",
+    "check": "node --check index.js && node --check games.js && node --check game-engine.js",
     "test": "node --test"
   },
-  "dependencies": {
-    "discord.js": "14.28.1"
-  }
+  "dependencies": { "discord.js": "14.28.1" }
 }
