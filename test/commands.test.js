@@ -2,7 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {PermissionFlagsBits}=require('discord.js');
-const {commands,ADMIN_ACTIONS,executeCommand}=require('../commands');
+const {commands,ADMIN_ACTIONS,executeCommand,storeEntryRow,productSelectRow,planSelectRow,orderModal}=require('../commands');
 const byName=new Map(commands.map(x=>[x.name,x]));
 test('E77 exposes five clear top-level command groups',()=>{
  assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store','رومات'].sort());
@@ -56,4 +56,20 @@ test('unknown root command without a subcommand returns a safe response',async()
   options:{getSubcommand:()=>null},editReply:async value=>(payload=value)};
  await executeCommand(interaction);
  assert.match(payload.content,/يحتاج اختيار إجراء/);
+});
+
+test('interactive store panel exposes a catalog button and all 24 products',()=>{
+ const entry=storeEntryRow().toJSON();
+ assert.equal(entry.components[0].custom_id,'e77:catalog');
+ const products=productSelectRow().toJSON().components[0];
+ assert.equal(products.custom_id,'e77:product');
+ assert.equal(products.options.length,24);
+});
+test('interactive store offers all five plans and collects safe order identity fields',()=>{
+ const plans=planSelectRow('guard').toJSON().components[0];
+ assert.equal(plans.custom_id,'e77:plan:guard');
+ assert.equal(plans.options.length,5);
+ const modal=orderModal('guard','7d').toJSON();
+ assert.equal(modal.custom_id,'e77:order:guard:7d');
+ assert.deepEqual(modal.components.map(row=>row.components[0].custom_id),['bot_name','bot_username','guild_id']);
 });
