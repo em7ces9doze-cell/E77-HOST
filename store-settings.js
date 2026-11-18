@@ -17,7 +17,7 @@ const filePath = path.resolve(
 function readAll() {
   try {
     const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!parsed || parsed.schemaVersion !== 1 || typeof parsed.guilds !== 'object' || Array.isArray(parsed.guilds)) {
+    if (!parsed || parsed.schemaVersion !== 1 || !parsed.guilds || typeof parsed.guilds !== 'object' || Array.isArray(parsed.guilds)) {
       throw new Error('STORE_SETTINGS_SCHEMA_INVALID');
     }
     return parsed;
@@ -29,18 +29,17 @@ function readAll() {
 }
 
 function get(guildId) {
-  if (typeof guildId !== 'string' || !/^\\d{17,20}$/.test(guildId)) throw new Error('INVALID_GUILD_ID');
+  if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) throw new Error('INVALID_GUILD_ID');
   const data = readAll();
   return { ...DEFAULTS, ...(data.guilds[guildId] || {}) };
 }
 
 function update(guildId, patch = {}) {
-  if (typeof guildId !== 'string' || !/^\\d{17,20}$/.test(guildId)) throw new Error('INVALID_GUILD_ID');
+  if (typeof guildId !== 'string' || !/^\d{17,20}$/.test(guildId)) throw new Error('INVALID_GUILD_ID');
   if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('INVALID_SETTINGS');
   const allowed = new Set(['categoryName', 'salesName', 'adminName', 'staffRoleId']);
   for (const key of Object.keys(patch)) if (!allowed.has(key)) throw new Error('UNKNOWN_SETTING');
-  const current = get(guildId);
-  const next = { ...current };
+  const next = { ...get(guildId) };
   for (const key of ['categoryName', 'salesName', 'adminName']) {
     if (patch[key] === undefined) continue;
     if (typeof patch[key] !== 'string') throw new Error('INVALID_SETTING_VALUE');
@@ -49,7 +48,7 @@ function update(guildId, patch = {}) {
     next[key] = value;
   }
   if (patch.staffRoleId !== undefined) {
-    if (patch.staffRoleId !== null && (typeof patch.staffRoleId !== 'string' || !/^\\d{17,20}$/.test(patch.staffRoleId))) {
+    if (patch.staffRoleId !== null && (typeof patch.staffRoleId !== 'string' || !/^\d{17,20}$/.test(patch.staffRoleId))) {
       throw new Error('INVALID_SETTING_VALUE');
     }
     next.staffRoleId = patch.staffRoleId;
@@ -58,7 +57,7 @@ function update(guildId, patch = {}) {
   data.guilds[guildId] = next;
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const tempPath = filePath + '.' + process.pid + '.tmp';
-  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2) + '\\n', { mode: 0o600 });
+  fs.writeFileSync(tempPath, JSON.stringify(data, null, 2) + '\n', { mode: 0o600 });
   fs.renameSync(tempPath, filePath);
   return { ...next };
 }
