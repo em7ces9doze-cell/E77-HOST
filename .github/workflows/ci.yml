@@ -2,7 +2,7 @@ name: E7 HOST CI
 
 on:
   push:
-    branches: [main, 'feature/**', 'refactor/**']
+    branches: [main, 'feature/**', 'feat/**', 'refactor/**']
   pull_request:
     branches: [main]
 
