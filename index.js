@@ -11,7 +11,7 @@ function rows(p){const yes=!!p,frames=(p?.frames.length||0)>=2;return[
 new ActionRowBuilder().addComponents(btn("create","مشروع جديد","🆕",ButtonStyle.Primary),btn("add","إضافة صور","🖼️",ButtonStyle.Success,!yes),btn("finish","إنهاء الرفع","✅",ButtonStyle.Secondary,!yes)),
 new ActionRowBuilder().addComponents(btn("preview","معاينة","▶️",ButtonStyle.Secondary,!frames),btn("settings","إعدادات الفيديو","⚙️",ButtonStyle.Secondary,!yes),btn("delete-last","حذف آخر إطار","↩️",ButtonStyle.Danger,!p?.frames.length)),
 new ActionRowBuilder().addComponents(btn("audio","الصوت والموسيقى","🎵",ButtonStyle.Secondary,!yes),btn("export","تصدير MP4","🎞️",ButtonStyle.Success,!frames),btn("projects","مشاريعي","📁")),
-new ActionRowBuilder().addComponents(btn("rename","تسمية المشروع","✏️",ButtonStyle.Secondary,!yes),btn("move-frame","ترتيب إطار","↕️",ButtonStyle.Secondary,!p?.frames.length),btn("set-duration","مدة إطار","⏱️",ButtonStyle.Secondary,!p?.frames.length),btn("remove-frame","حذف إطار","🗑️",ButtonStyle.Danger,!p?.frames.length)),
+new ActionRowBuilder().addComponents(btn("rename","تسمية المشروع","✏️",ButtonStyle.Secondary,!yes),btn("frame-list","عرض الإطارات","📋",ButtonStyle.Secondary,!p?.frames.length),btn("move-frame","ترتيب إطار","↕️",ButtonStyle.Secondary,!p?.frames.length),btn("set-duration","مدة إطار","⏱️",ButtonStyle.Secondary,!p?.frames.length),btn("remove-frame","حذف إطار","🗑️",ButtonStyle.Danger,!p?.frames.length)),
 new ActionRowBuilder().addComponents(btn("delete-project","حذف المشروع","🗑️",ButtonStyle.Danger,!yes),btn("help","شرح الاستخدام","❔"))
 ];}
 function settingsRows(p){const s=p.settings;const menu=(id,placeholder,items,current)=>new ActionRowBuilder().addComponents(new StringSelectMenuBuilder().setCustomId("sm:"+id).setPlaceholder(placeholder).addOptions(items.map(([label,value])=>({label,value,default:String(current)===value}))));return[
@@ -22,7 +22,7 @@ menu("set-aspect","نسبة العرض",[["16:9 — أفقي","landscape"],["9:1
 function help(){return new EmbedBuilder().setColor(0x5865F2).setTitle("دليل STOP MOTION STUDIO").setDescription("ابدأ من لوحة التحكم الثابتة باستخدام `+add` أو `+panel`.").addFields(
 {name:"إنشاء ورفع",value:"أنشئ مشروعًا، اضغط إضافة صور، ثم أرسل الصور كمرفقات في القناة بالترتيب. اضغط إنهاء الرفع عند الانتهاء."},
 {name:"إعدادات مستقلة",value:"حدد FPS من 6 إلى 30، والدقة 480p/720p/1080p، ونسبة العرض أفقي 16:9 أو عمودي 9:16 أو مربع 1:1."},
-{name:"إدارة المشروع",value:"سمّ المشروع، أعد ترتيب الإطارات، حدّد مدة مستقلة لكل إطار، احذف إطارًا برقم، أو احذف المشروع بعد تأكيدك."},
+{name:"إدارة المشروع",value:"اعرض قائمة الإطارات ومددها، سمّ المشروع، أعد ترتيب الإطارات، حدّد مدة مستقلة لكل إطار، احذف إطارًا برقم، أو احذف المشروع بعد تأكيدك."},
 {name:"المعاينة والتصدير",value:"عاين الفيديو قبل التصدير إلى MP4. يمكن إضافة ملف صوتي واحد. مدة كل إطار قابلة للتعديل من 0.05 إلى 5 ثوانٍ."},
 {name:"الأوامر",value:"`+add` أو `+panel` اللوحة · `+help` المساعدة · `+done` إنهاء الرفع · `+cancel` إيقاف استقبال الملفات."},
 {name:"الحدود",value:`حتى ${maxFrames} إطارًا، ${Math.round(maxImage/1048576)}MB لكل صورة، و${Math.round(maxAudio/1048576)}MB للصوت. تخضع الملفات لحدود Discord.`});}
@@ -60,6 +60,7 @@ if(action==="audio"){if(!await store.get(g,u))return i.reply({content:"أنشئ 
 if(action==="finish"){uploads.delete(k);const p=await store.get(g,u);return i.update({embeds:[panel(p,"تم إنهاء استقبال الملفات")],components:rows(p)});}
 if(action==="preview")return sendRender(i,true);if(action==="export")return sendRender(i,false);
 if(action==="help")return i.reply({embeds:[help()],ephemeral:true});
+if(action==="frame-list"){const p=await store.get(g,u);if(!p?.frames.length)return i.reply({content:"لا توجد إطارات في المشروع.",ephemeral:true});const lines=p.frames.map((f,n)=>{const d=Number.isFinite(f.durationSec)?f.durationSec.toFixed(2)+"s":(1/p.settings.fps).toFixed(2)+"s (FPS)";return (n+1)+". "+path.basename(f.path)+" — "+d;});const embed=new EmbedBuilder().setColor(0x5865F2).setTitle("قائمة إطارات: "+p.name).setDescription(lines.join("\n").slice(0,4000)).setFooter({text:p.frames.length+" frames · ترتيب العرض هو ترتيب الفيديو"});return i.reply({embeds:[embed],ephemeral:true});}
 if(action==="delete-last"){const p=await store.removeLast(g,u);return i.update({embeds:[panel(p,"تم حذف آخر إطار")],components:rows(p)});}
 if(action==="rename"){const modal=new ModalBuilder().setCustomId("sm:rename-submit").setTitle("تسمية المشروع").addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("project-name").setLabel("اسم المشروع").setStyle(TextInputStyle.Short).setMaxLength(60).setRequired(true)));return i.showModal(modal);}
 if(action==="remove-frame"){const modal=new ModalBuilder().setCustomId("sm:remove-frame-submit").setTitle("حذف إطار محدد").addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("frame-number").setLabel("رقم الإطار المراد حذفه").setPlaceholder("مثال: 3").setStyle(TextInputStyle.Short).setMaxLength(4).setRequired(true)));return i.showModal(modal);}
