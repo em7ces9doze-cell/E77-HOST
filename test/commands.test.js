@@ -2,7 +2,7 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {PermissionFlagsBits}=require('discord.js');
-const {commands,ADMIN_ACTIONS}=require('../commands');
+const {commands,ADMIN_ACTIONS,executeCommand}=require('../commands');
 const byName=new Map(commands.map(x=>[x.name,x]));
 test('E77 exposes four clear top-level command groups only',()=>{
  assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store'].sort());
@@ -27,3 +27,27 @@ test('admin group is Discord Administrator restricted',()=>{
 });
 
 test('help is grouped under hosting rather than a separate top-level command',()=>{ assert.ok(byName.get('hosting').options.some(x=>x.name==='help')); });
+
+test('legacy help command works without a subcommand',async()=>{
+ let payload;
+ const interaction={commandName:'help',user:{id:'u1'},guildId:'g1',inGuild:()=>true,
+  options:{getSubcommand(required){assert.equal(required,false);return null;}},
+  editReply:async value=>(payload=value)};
+ await executeCommand(interaction);
+ assert.ok(payload.embeds[0].data.title.includes('دليل E77 HOST'));
+});
+test('legacy ping command works without a subcommand',async()=>{
+ let payload;
+ const interaction={commandName:'ping',user:{id:'u1'},guildId:'g1',inGuild:()=>true,
+  options:{getSubcommand(required){assert.equal(required,false);return null;}},
+  editReply:async value=>(payload=value)};
+ await executeCommand(interaction);
+ assert.match(payload.content,/Pong/);
+});
+test('unknown root command without a subcommand returns a safe response',async()=>{
+ let payload;
+ const interaction={commandName:'old-command',user:{id:'u1'},guildId:'g1',inGuild:()=>true,
+  options:{getSubcommand:()=>null},editReply:async value=>(payload=value)};
+ await executeCommand(interaction);
+ assert.match(payload.content,/يحتاج اختيار إجراء/);
+});

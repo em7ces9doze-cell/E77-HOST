@@ -57,7 +57,11 @@ async function openOrder(i,item){
 }
 async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
- const group=i.commandName,sub=i.options.getSubcommand(),key=group+':'+sub,g=i.guildId,u=i.user.id;
+ const group=i.commandName,sub=i.options.getSubcommand(false),key=group+':'+sub,g=i.guildId,u=i.user.id;
+ if(group==='ping')return i.editReply({content:'Pong! 🟢 E77 HOST يعمل.'});
+ if(group==='help')return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
+  '**الاستضافة**\\n/hosting guide — دليل الطلب\\n/hosting setup — تجهيز المركز (الإدارة)\\n/hosting panel — نشر اللوحة\\n\\n**المتجر**\\n/store browse — عرض الباقات\\n/store buy — شراء باقة\\n\\n**العملة E77**\\n/coins balance — رصيدك\\n/coins daily — المكافأة اليومية\\n/coins work — مكافأة النشاط\\n/coins transfer — تحويل\\n/coins deposit و /coins withdraw — البنك\\n/coins history — سجل العمليات\\n/coins profile — ملفك الاقتصادي\\n/coins leaderboard — ترتيب الأرصدة\\n/coins inventory — المشتريات\\n\\n**الإدارة**\\n/store add و /store remove\\n/e77-admin coins-add و coins-remove و coins-set')]});
+ if(!sub)return i.editReply({content:'هذا الأمر يحتاج اختيار إجراء. استخدم /hosting help لعرض الأوامر.'});
  if(ADMIN_ACTIONS.has(key)&&!isAdmin(i))return i.editReply({content:'هذا الإجراء مخصص للإدارة.'});
  if(group==='hosting'){
   if(sub==='help')return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
@@ -106,8 +110,17 @@ async function executeCommand(i){
 }
 async function handleInteraction(i){
  if(!i.isChatInputCommand())return;
- await i.deferReply({ephemeral:!(i.commandName==='coins'&&i.options.getSubcommand()==='leaderboard')}).catch(()=>{});
- try{await executeCommand(i);}catch(e){const messages={NEED_CHANNEL_PERMISSION:'يحتاج البوت إلى صلاحية Manage Channels.',ORDER_EXISTS:'لديك طلب مفتوح لهذه الباقة بالفعل.',INVALID_AMOUNT:'المبلغ غير صالح.',SAME_USER:'لا يمكنك التحويل لنفسك.',INSUFFICIENT_FUNDS:'رصيدك غير كافٍ.',INSUFFICIENT_BANK_FUNDS:'رصيد البنك غير كافٍ.',BALANCE_LIMIT:'وصل الرصيد إلى الحد الآمن.',ITEM_EXISTS:'معرف المنتج أو اسمه مستخدم.',ITEM_NOT_FOUND:'المنتج غير موجود.'};await i.editReply({content:messages[e.message]||'تعذر تنفيذ العملية. حاول لاحقًا أو تواصل مع الإدارة.'}).catch(()=>{});console.error('[E77] '+i.commandName+' failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));}
+ try{
+  const sub=i.options.getSubcommand(false);
+  await i.deferReply({ephemeral:!(i.commandName==='coins'&&sub==='leaderboard')});
+  await executeCommand(i);
+ }catch(e){
+  const messages={NEED_CHANNEL_PERMISSION:'يحتاج البوت إلى صلاحية Manage Channels.',ORDER_EXISTS:'لديك طلب مفتوح لهذه الباقة بالفعل.',INVALID_AMOUNT:'المبلغ غير صالح.',SAME_USER:'لا يمكنك التحويل لنفسك.',INSUFFICIENT_FUNDS:'رصيدك غير كافٍ.',INSUFFICIENT_BANK_FUNDS:'رصيد البنك غير كافٍ.',BALANCE_LIMIT:'وصل الرصيد إلى الحد الآمن.',ITEM_EXISTS:'معرف المنتج أو اسمه مستخدم.',ITEM_NOT_FOUND:'المنتج غير موجود.'};
+  const message=messages[e.message]||'تعذر تنفيذ العملية. حاول لاحقًا أو تواصل مع الإدارة.';
+  if(i.deferred||i.replied)await i.editReply({content:message}).catch(()=>{});
+  else await i.reply({content:message,ephemeral:true}).catch(()=>{});
+  console.error('[E77] '+i.commandName+' failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,48));
+ }
 }
 async function registerCommands(client){if(!client.application?.commands)throw Error('APPLICATION_NOT_READY');const id=process.env.DISCORD_GUILD_ID;const result=await client.application.commands.set(commands,id||undefined);console.log('[COMMANDS] Registered '+result.size+' E77 HOST command groups.');}
 module.exports={commands,ADMIN_ACTIONS,executeCommand,handleInteraction,registerCommands};
