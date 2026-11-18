@@ -7,8 +7,8 @@ const g="guild-test",u="user-test",p=await store.create(g,u,"Test film");
 assert.equal(p.name,"Test film");assert.equal(p.settings.fps,10);
 const a=store.framePath(p.id,1,".jpg"),b=store.framePath(p.id,2,".png"),c=store.framePath(p.id,3,".webp");
 await Promise.all([fs.writeFile(a,"a"),fs.writeFile(b,"b"),fs.writeFile(c,"c")]);
-await store.add(g,u,a);await store.add(g,u,b);await store.add(g,u,c);
-let current=await store.get(g,u);assert.equal(current.frames.length,3);
+await store.add(g,u,a,"first.jpg");await store.add(g,u,b,"second.png");await store.add(g,u,c,"third.webp");
+let current=await store.get(g,u);assert.equal(current.frames.length,3);assert.equal(current.frames[0].name,"first.jpg");
 current=await store.moveFrame(g,u,3,1);assert.equal(current.frames[0].path,c);
 current=await store.setFrameDuration(g,u,1,0.75);assert.equal(current.frames[0].durationSec,0.75);
 await assert.rejects(store.setFrameDuration(g,u,1,8),/Invalid frame duration/);
@@ -19,6 +19,7 @@ current=await store.rename(g,u,"Edited film");assert.equal(current.name,"Edited 
 current=await store.removeFrame(g,u,2);assert.equal(current.frames.length,2);
 assert.equal(await fs.stat(a).then(()=>true,()=>false),false);
 assert.equal((await store.list(g,u)).length,1);
+const audio1=store.audioPath(p.id,".mp3"),audio2=store.audioPath(p.id,".mp3");await fs.writeFile(audio1,"audio-1");await store.setAudio(g,u,audio1);await fs.writeFile(audio2,"audio-2");await store.setAudio(g,u,audio2);assert.equal(await fs.stat(audio1).then(()=>true,()=>false),false);assert.equal(await fs.stat(audio2).then(()=>true,()=>false),true);
 await store.setDashboard(g,u,"channel-test","message-test");
 assert.equal(await store.getDashboard(g,u,"channel-test"),"message-test");
 const deleted=await store.deleteActive(g,u);assert.equal(deleted,"Edited film");assert.equal(await store.get(g,u),null);assert.equal((await store.list(g,u)).length,0);
