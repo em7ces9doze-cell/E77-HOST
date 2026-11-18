@@ -1,6 +1,6 @@
 'use strict';
 
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
 const economy = require('./economy-store');
 
 const ADMIN = PermissionFlagsBits.Administrator;
@@ -35,10 +35,19 @@ commands.push(
   staff('shopremove', 'حذف منتج من المتجر').addStringOption(o => o.setName('item_id').setDescription('معرف المنتج').setRequired(true)).toJSON(),
   staff('coinsadd', 'إضافة عملات لعضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o => o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)).toJSON(),
   staff('coinsremove', 'سحب عملات من عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o => o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)).toJSON(),
-  staff('coinsset', 'تعيين رصيد عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o => o.setName('amount').setDescription('الرصيد الجديد').setMinValue(0).setMaxValue(1000000000).setRequired(true)).toJSON()
+  staff('coinsset', 'تعيين رصيد عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o => o.setName('amount').setDescription('الرصيد الجديد').setMinValue(0).setMaxValue(1000000000).setRequired(true)).toJSON(),
+  staff('hosting-room', 'إنشاء قسم وروم طلبات الاستضافة').toJSON(),
+  staff('hosting-embed', 'إرسال Embed احترافي إلى روم محدد')
+    .addChannelOption(o => o.setName('channel').setDescription('الروم المستهدف').addChannelTypes(ChannelType.GuildText).setRequired(true))
+    .addStringOption(o => o.setName('title').setDescription('عنوان الإيمبد').setMaxLength(256).setRequired(true))
+    .addStringOption(o => o.setName('description').setDescription('محتوى الإيمبد').setMaxLength(3500).setRequired(true))
+    .addStringOption(o => o.setName('color').setDescription('لون HEX مثل 7653D8').setMaxLength(6).setRequired(false)).toJSON(),
+  user('hosting-buy', 'شراء منتج استضافة من المتجر وفتح روم طلب خاص')
+    .addStringOption(o => o.setName('item_id').setDescription('معرف باقة الاستضافة من المتجر').setRequired(true)).toJSON(),
+  user('coin-info', 'عرض معلومات العملة الرقمية الافتراضية وقواعدها').toJSON()
 );
 
-const ADMIN_COMMANDS = new Set(['shopadd', 'shopremove', 'coinsadd', 'coinsremove', 'coinsset']);
+const ADMIN_COMMANDS = new Set(['shopadd', 'shopremove', 'coinsadd', 'coinsremove', 'coinsset', 'hosting-room', 'hosting-embed']);
 const fmt = value => new Intl.NumberFormat('en-US').format(value);
 const makeEmbed = (title, description) => new EmbedBuilder()
   .setColor(0x7653D8).setTitle(title).setDescription(description).setTimestamp();
@@ -103,8 +112,12 @@ async function executeCommand(interaction) {
       '/buy — شراء منتج',
       '/inventory — المقتنيات',
       '/profile — الملف الاقتصادي',
+      '/hosting-buy — شراء باقة وفتح روم طلب خاص',
+      '/coin-info — معلومات العملة الافتراضية',
       '',
       '**أوامر الإدارة**',
+      '/hosting-room — إنشاء قسم وروم طلبات الاستضافة',
+      '/hosting-embed — إرسال Embed إلى روم',
       '/shopadd — إضافة منتج',
       '/shopremove — حذف منتج',
       '/coinsadd — إضافة رصيد',
@@ -211,6 +224,99 @@ async function executeCommand(interaction) {
     return interaction.reply({ embeds: [makeEmbed('مقتنيات ' + target.username, description)], ephemeral: true });
   }
 
+  if (name === 'coin-info') {
+    return interaction.reply({ embeds: [makeEmbed('E77 Coin — العملة الافتراضية',
+      'عملة داخلية افتراضية لإدارة المكافآت والمشتريات داخل هذا السيرفر.\\n\\n' +
+      '• المحفظة: رصيدك المتاح للتحويل والشراء.\\n' +
+      '• البنك: رصيد محفوظ داخل نظام البوت.\\n' +
+      '• كل عملية تسجل في سجل المعاملات.\\n' +
+      '• لا تمثل العملة أصلًا ماليًا أو عملة مشفرة حقيقية، ولا يمكن استبدالها بأموال.')], ephemeral: true });
+  }
+
+  if (name === 'hosting-room') {
+    const me = interaction.guild.members.me;
+    if (!me?.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      return interaction.reply({ content: 'يحتاج البوت إلى صلاحية Manage Channels لإنشاء روم الاستضافة.', ephemeral: true });
+    }
+    const existing = interaction.guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === '🎮・الاستضافة');
+    const category = existing || await interaction.guild.channels.create({
+      name: '🎮・الاستضافة',
+      type: ChannelType.GuildCategory,
+      reason: 'E77 HOST hosting area setup',
+    });
+    let channel = interaction.guild.channels.cache.find(c => c.type === ChannelType.GuildText && c.parentId === category.id && c.name === 'طلبات-الاستضافة');
+    if (!channel) {
+      channel = await interaction.guild.channels.create({
+        name: 'طلبات-الاستضافة',
+        type: ChannelType.GuildText,
+        parent: category.id,
+        topic: 'طلبات وباقات الاستضافة عبر E77 HOST',
+        reason: 'E77 HOST hosting request room',
+      });
+    }
+    await channel.send({
+      embeds: [makeEmbed('E77 HOST | مركز الاستضافة',
+        'مرحبًا بك في مركز الاستضافة.\\n\\n' +
+        '1. استخدم `/shop` لمشاهدة الباقات والمنتجات المتاحة.\\n' +
+        '2. استخدم `/hosting-buy` مع معرف الباقة لبدء طلب شراء.\\n' +
+        '3. سيفتح البوت رومًا خاصًا لتفاصيل طلبك بعد نجاح الدفع.')],
+    });
+    return interaction.reply({ content: 'تم تجهيز قسم الاستضافة: ' + channel.toString(), ephemeral: true });
+  }
+
+  if (name === 'hosting-embed') {
+    const channel = interaction.options.getChannel('channel', true);
+    const title = interaction.options.getString('title', true);
+    const description = interaction.options.getString('description', true);
+    const rawColor = (interaction.options.getString('color') || '7653D8').replace(/^#/, '');
+    if (!/^[0-9a-fA-F]{6}$/.test(rawColor)) {
+      return interaction.reply({ content: 'اللون غير صالح. استخدم ستة أرقام/حروف HEX مثل 7653D8.', ephemeral: true });
+    }
+    const embed = new EmbedBuilder().setColor(parseInt(rawColor, 16)).setTitle(title).setDescription(description).setFooter({ text: 'E77 HOST • Hosting System' }).setTimestamp();
+    await channel.send({ embeds: [embed] });
+    return interaction.reply({ content: 'تم إرسال الإيمبد إلى ' + channel.toString() + '.', ephemeral: true });
+  }
+
+  if (name === 'hosting-buy') {
+    const itemId = interaction.options.getString('item_id', true);
+    const me = interaction.guild.members.me;
+    if (!me?.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      return interaction.reply({ content: 'يحتاج البوت إلى صلاحية Manage Channels لفتح روم الطلب.', ephemeral: true });
+    }
+    const safeName = interaction.user.username.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 18) || 'member';
+    const adminRoles = interaction.guild.roles.cache.filter(role => role.permissions.has(PermissionFlagsBits.Administrator));
+    const overwrites = [
+      { id: interaction.guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+      { id: me.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory, PermissionFlagsBits.ManageChannels] },
+      ...adminRoles.map(role => ({ id: role.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] })),
+    ];
+    const category = interaction.guild.channels.cache.find(c => c.type === ChannelType.GuildCategory && c.name === '🎮・الاستضافة');
+    const ticket = await interaction.guild.channels.create({
+      name: 'طلب-' + safeName,
+      type: ChannelType.GuildText,
+      ...(category ? { parent: category.id } : {}),
+      permissionOverwrites: overwrites,
+      topic: 'E77 hosting purchase | buyer=' + interaction.user.id + ' | item=' + itemId,
+      reason: 'E77 HOST purchase request',
+    });
+    try {
+      const result = await economy.buy(guildId, userId, itemId);
+      await ticket.send({
+        content: '<@' + userId + '> طلبك وصل إلى فريق الإدارة.',
+        embeds: [makeEmbed('تم استلام طلب الاستضافة',
+          'المنتج: **' + result.item.name + '**\\n' +
+          'المبلغ المدفوع: **' + fmt(result.item.price) + '** 🪙\\n' +
+          'الرصيد المتبقي: **' + fmt(result.balance) + '** 🪙\\n\\n' +
+          'سيتم التنسيق معك هنا لإكمال إعداد الاستضافة.')],
+      });
+      return interaction.reply({ content: 'تم الدفع وفتح روم طلبك الخاص: ' + ticket.toString(), ephemeral: true });
+    } catch (error) {
+      await ticket.delete('Purchase failed; remove unused order room').catch(() => {});
+      throw error;
+    }
+  }
+
   if (name === 'shopadd') {
     const id = interaction.options.getString('item_id', true).toLowerCase();
     const productName = interaction.options.getString('name', true).trim();
@@ -259,7 +365,7 @@ async function registerCommands(client) {
   if (!client.application?.commands) throw new Error('Discord application commands are not ready.');
   const guildId = process.env.DISCORD_GUILD_ID;
   const result = await client.application.commands.set(commands, guildId || undefined);
-  console.log('[COMMANDS] Registered ' + result.size + ' E77 HOST economy commands.');
+  console.log('[COMMANDS] Registered ' + result.size + ' E77 HOST commands.');
 }
 
 module.exports = { commands, ADMIN_COMMANDS, executeCommand, handleInteraction, registerCommands };

@@ -8,12 +8,12 @@ const { commands, ADMIN_COMMANDS } = require('../commands');
 test('E7 HOST economy slash commands are unique', () => {
   const names = commands.map(command => command.name);
   assert.equal(new Set(names).size, names.length);
-  assert.equal(names.length, 19);
+  assert.equal(names.length, 23);
 });
 
 test('economy administration commands require Administrator', () => {
   const byName = new Map(commands.map(command => [command.name, command]));
-  assert.deepEqual([...ADMIN_COMMANDS].sort(), ['coinsadd','coinsremove','coinsset','shopadd','shopremove'].sort());
+  assert.deepEqual([...ADMIN_COMMANDS].sort(), ['coinsadd','coinsremove','coinsset','hosting-embed','hosting-room','shopadd','shopremove'].sort());
   for (const name of ADMIN_COMMANDS) {
     assert.equal(byName.get(name).default_member_permissions, PermissionFlagsBits.Administrator.toString());
   }
