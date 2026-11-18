@@ -13,10 +13,10 @@ Discord-based stop-motion editor. Build image sequences, tune output settings, p
 ## Commands
 - `+add` or `+panel`: open or refresh your saved control panel in the current channel.
 - `+help`: show the guide.
-- `+done`: finish image/audio upload mode.
+- `+done`: finish upload mode.
 - `+cancel`: stop receiving uploads.
 
-The dashboard message is reused in the same channel instead of creating a new panel every time. Buttons update the dashboard in place.
+The dashboard message is reused in the same channel instead of creating a new panel every time. Buttons update the dashboard in place. The bot attempts to pin the dashboard; channel permissions must allow pinning.
 
 ## Studio workflow
 1. Open `+panel`, then click **مشروع جديد**.
@@ -26,13 +26,20 @@ The dashboard message is reused in the same channel instead of creating a new pa
    - FPS: 6, 8, 10, 12, 15, 24, or 30.
    - Resolution: 480p, 720p, or 1080p.
    - Aspect ratio: landscape 16:9, portrait 9:16, or square 1:1.
-5. Use **تسمية المشروع**, **حذف إطار برقم**, or **حذف آخر إطار** to manage the active project.
-6. Use **مشاريعي** to switch between saved projects.
-7. Preview the result, optionally add one audio file, then export MP4.
+5. Edit the sequence with **ترتيب إطار**, **مدة إطار**, **حذف إطار**, and **حذف آخر إطار**.
+6. Use **تسمية المشروع** and **مشاريعي** to manage and switch projects.
+7. Use **حذف المشروع** only after confirming the deletion.
+8. Preview the result, optionally add one audio file, then export MP4.
+
+Each frame can have its own duration from 0.05 to 5 seconds. Frames without a custom duration use the selected FPS. Supported audio extensions: MP3, WAV, OGG, M4A, AAC, FLAC.
 
 ## Limits and storage
-Defaults: 80 frames, 8MB per image, 15MB per audio file. Discord upload limits still apply. FFmpeg is bundled through `ffmpeg-static`.
+Defaults: 80 frames, 8MB per image, 15MB per audio file. Discord upload limits still apply. FFmpeg is bundled through `ffmpeg-static`. Temporary rendered MP4 files are deleted after Discord finishes sending them.
 
 Environment variables: `PREFIX`, `STUDIO_DATA_DIR`, `MAX_FRAMES`, `MAX_IMAGE_BYTES`, `MAX_AUDIO_BYTES`.
 
 Keep a backup of the persistent data directory. The project JSON store is designed for a single running bot process, not multiple replicas.
+
+## Validation
+- `npm run check` validates JavaScript syntax.
+- `npm test` exercises project storage, frame ordering, per-frame duration, settings, and project deletion.
