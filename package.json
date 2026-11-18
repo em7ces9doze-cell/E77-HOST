@@ -1,7 +1,19 @@
 {
-  "name":"gulf-bank","version":"1.0.0","private":true,
-  "description":"Gulf Bank virtual economy Discord bot","main":"index.js","type":"commonjs",
-  "engines":{"node":">=22.0.0"},
-  "scripts":{"start":"node index.js","check":"node --check index.js && node --check bank.js && node --check bank-store.js","test":"node --test"},
-  "dependencies":{"discord.js":"14.28.1"}
+  "name": "gulf-bank",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Gulf Bank virtual economy Discord bot",
+  "main": "index.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "check": "node --check index.js && node --check bank.js && node --check bank-store.js && node --check public/world.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "discord.js": "14.28.1"
+  }
 }
