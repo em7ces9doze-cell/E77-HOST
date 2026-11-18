@@ -4,6 +4,7 @@ const http = require('node:http');
 const path = require('node:path');
 const { Client, GatewayIntentBits } = require('discord.js');
 const { BridgeExecutionEngine, validBridgeSecret } = require('./bridge-engine');
+const { handleInteraction, registerCommands } = require('./commands');
 
 const PORT = Number(process.env.PORT || 8080);
 const CONTROL_URL = (process.env.EM7_CONTROL_URL || 'https://em7control-vxdeumhb.manus.space').replace(/\/$/, '');
@@ -71,7 +72,17 @@ function startBridgeWorker() {
 
 client.once('ready', () => {
   console.log('[READY] Discord client connected.');
+  registerCommands(client).catch(error => {
+    const code = typeof error?.code === 'number' || typeof error?.code === 'string'
+      ? String(error.code).slice(0, 32)
+      : 'command_registration_failed';
+    console.error(`[COMMANDS] Registration failed; code=${code}.`);
+  });
   startBridgeWorker();
+});
+
+client.on('interactionCreate', interaction => {
+  void handleInteraction(interaction);
 });
 
 client.on('error', error => {
