@@ -138,7 +138,8 @@ module.exports = {
   }),
   inventory: (g,u) => read(s => ensureUser(ensureGuild(s,g),u).inventory.map(x=>({...x}))),
   adminAdjust: (g,u,amount,mode) => mutate(s => {
-    safeAmount(amount);
+    if (mode === 'set') { if (!Number.isSafeInteger(amount) || amount < 0 || amount > 1000000000) throw new Error('INVALID_AMOUNT'); }
+    else safeAmount(amount);
     const guild=ensureGuild(s,g), user=ensureUser(guild,u);
     if(mode==='add'){user.balance+=amount;user.totalEarned+=amount;}
     else if(mode==='remove'){if(user.balance<amount)throw new Error('INSUFFICIENT_FUNDS');user.balance-=amount;}
