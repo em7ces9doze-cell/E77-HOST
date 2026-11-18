@@ -4,7 +4,7 @@ const {Client,GatewayIntentBits,Partials,REST,Routes}=require('discord.js');
 const {handleMessage,handleComponent}=require('./bank');
 const PORT=Number(process.env.PORT||8080),TOKEN=process.env.DISCORD_TOKEN||process.env.BOT_TOKEN;
 const PUBLIC_DIR=path.resolve(__dirname,'public');
-const TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.json':'application/json; charset=utf-8'};
+const TYPES={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.json':'application/json; charset=utf-8'};
 const client=new Client({intents:[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent],partials:[Partials.Channel]});
 const server=http.createServer((req,res)=>{
  const pathname=(req.url||'/').split('?')[0];
