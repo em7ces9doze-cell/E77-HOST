@@ -3,6 +3,7 @@ const {SlashCommandBuilder,EmbedBuilder,PermissionFlagsBits,ChannelType}=require
 const economy=require('./economy-store');
 const ADMIN=PermissionFlagsBits.Administrator;
 const commands=[
+ new SlashCommandBuilder().setName('رومات').setDescription('إنشاء رومات متجر E77 والادارة').setDefaultMemberPermissions(ADMIN),
  new SlashCommandBuilder().setName('hosting').setDescription('مركز خدمات الاستضافة')
   .addSubcommand(s=>s.setName('setup').setDescription('إنشاء قسم ولوحة الاستضافة'))
   .addSubcommand(s=>s.setName('panel').setDescription('نشر لوحة الاستضافة في روم').addChannelOption(o=>o.setName('channel').setDescription('الروم').addChannelTypes(ChannelType.GuildText).setRequired(true)))
@@ -29,7 +30,7 @@ const commands=[
   .addSubcommand(s=>s.setName('coins-remove').setDescription('خصم رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)))
   .addSubcommand(s=>s.setName('coins-set').setDescription('تعيين رصيد').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('الرصيد').setMinValue(0).setMaxValue(1000000000).setRequired(true)))
 ].map(x=>x.toJSON());
-const ADMIN_ACTIONS=new Set(['hosting:setup','hosting:panel','store:add','store:remove','e77-admin:coins-add','e77-admin:coins-remove','e77-admin:coins-set']);
+const ADMIN_ACTIONS=new Set(['رومات:null','hosting:setup','hosting:panel','store:add','store:remove','e77-admin:coins-add','e77-admin:coins-remove','e77-admin:coins-set']);
 const fmt=n=>new Intl.NumberFormat('en-US').format(n);
 const makeEmbed=(title,description)=>new EmbedBuilder().setColor(0x7653D8).setTitle(title).setDescription(description).setFooter({text:'E77 HOST • Hosting Services'}).setTimestamp();
 const isAdmin=i=>Boolean(i.memberPermissions?.has(ADMIN));
@@ -41,6 +42,33 @@ async function hostingArea(guild){
  let panel=guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&c.parentId===category.id&&c.name==='ابدأ-من-هنا');
  if(!panel)panel=await guild.channels.create({name:'ابدأ-من-هنا',type:ChannelType.GuildText,parent:category.id,topic:'لوحة خدمات E77 HOST',reason:'E77 HOST setup'});
  return {category,panel};
+}
+async function createStoreRooms(guild){
+ const me=guild.members.me;
+ if(!me?.permissions.has(PermissionFlagsBits.ManageChannels))throw Error('NEED_CHANNEL_PERMISSION');
+ const categoryName='E77 STORE • المتجر';
+ let category=guild.channels.cache.find(c=>c.type===ChannelType.GuildCategory&&c.name===categoryName);
+ if(!category)category=await guild.channels.create({name:categoryName,type:ChannelType.GuildCategory,reason:'E77 STORE room setup'});
+ const adminRoles=guild.roles.cache.filter(r=>r.permissions.has(ADMIN));
+ const everyone={id:guild.id,deny:[PermissionFlagsBits.SendMessages,PermissionFlagsBits.CreatePublicThreads,PermissionFlagsBits.CreatePrivateThreads]};
+ const botAllow={id:me.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory,PermissionFlagsBits.EmbedLinks,PermissionFlagsBits.ManageChannels]};
+ let sales=guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&c.parentId===category.id&&c.name==='🛒・البيع');
+ if(!sales)sales=await guild.channels.create({name:'🛒・البيع',type:ChannelType.GuildText,parent:category.id,topic:'E77 STORE | تصفح البوتات والاشتراكات',permissionOverwrites:[everyone,botAllow],reason:'E77 STORE sales room'});
+ let admin=guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&c.parentId===category.id&&c.name==='🛡️・الإدارة');
+ if(!admin)admin=await guild.channels.create({name:'🛡️・الإدارة',type:ChannelType.GuildText,parent:category.id,topic:'E77 STORE | إدارة الطلبات والاشتراكات',permissionOverwrites:[
+  {id:guild.id,deny:[PermissionFlagsBits.ViewChannel]},
+  ...adminRoles.map(role=>({id:role.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]})),
+  botAllow
+ ],reason:'E77 STORE admin room'});
+ const salesMessages=await sales.messages.fetch({limit:10}).catch(()=>null);
+ if(!salesMessages?.some(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 STORE | متجر البوتات')){
+  await sales.send({embeds:[makeEmbed('E77 STORE | متجر البوتات','مرحبًا بك في متجر E77.\n\nتصفح المنتجات المتاحة باستخدام /store browse.\nاختر البوت والاشتراك المناسب، ثم أكمل بيانات التفعيل.\n\nلا ترسل أي Bot Token أو كلمة مرور داخل Discord.')]});
+ }
+ const adminMessages=await admin.messages.fetch({limit:10}).catch(()=>null);
+ if(!adminMessages?.some(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 STORE | مركز الإدارة')){
+  await admin.send({embeds:[makeEmbed('E77 STORE | مركز الإدارة','هذه القناة مخصصة لفريق الإدارة لمتابعة تجهيز المنتجات والطلبات والاشتراكات.\n\nتأكد من مراجعة هوية العميل والسيرفر قبل اعتماد أي تفعيل.')]});
+ }
+ return {category,sales,admin};
 }
 function panelEmbed(){return makeEmbed('E77 HOST | مركز الاستضافة','مرحبًا بك في خدمات الاستضافة.\n\n1. استخدم /store browse لاستعراض الباقات.\n2. استخدم /store buy لشراء الباقة بمعرفها.\n3. بعد الدفع، تُفتح لك قناة خاصة لمتابعة طلب الاستضافة.\n\nعملة E77 رصيد افتراضي داخل السيرفر، وليست عملة مشفرة حقيقية أو قابلة للسحب النقدي.');}
 async function openOrder(i,item){
@@ -59,6 +87,7 @@ async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
  const group=i.commandName,sub=i.options.getSubcommand(false),key=group+':'+sub,g=i.guildId,u=i.user.id;
  if(group==='ping')return i.editReply({content:'Pong! 🟢 E77 HOST يعمل.'});
+ if(group==='رومات'){const rooms=await createStoreRooms(i.guild);return i.editReply({content:'تم تجهيز مركز E77 STORE:\n'+rooms.sales.toString()+'\n'+rooms.admin.toString()});}
  if(group==='help')return i.editReply({embeds:[makeEmbed('دليل E77 HOST',
   '**الاستضافة**\\n/hosting guide — دليل الطلب\\n/hosting setup — تجهيز المركز (الإدارة)\\n/hosting panel — نشر اللوحة\\n\\n**المتجر**\\n/store browse — عرض الباقات\\n/store buy — شراء باقة\\n\\n**العملة E77**\\n/coins balance — رصيدك\\n/coins daily — المكافأة اليومية\\n/coins work — مكافأة النشاط\\n/coins transfer — تحويل\\n/coins deposit و /coins withdraw — البنك\\n/coins history — سجل العمليات\\n/coins profile — ملفك الاقتصادي\\n/coins leaderboard — ترتيب الأرصدة\\n/coins inventory — المشتريات\\n\\n**الإدارة**\\n/store add و /store remove\\n/e77-admin coins-add و coins-remove و coins-set')]});
  if(!sub)return i.editReply({content:'هذا الأمر يحتاج اختيار إجراء. استخدم /hosting help لعرض الأوامر.'});
