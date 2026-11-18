@@ -1,310 +1,53 @@
 'use strict';
-
-const {
-  SlashCommandBuilder,
-  EmbedBuilder,
-  PermissionFlagsBits,
-  ChannelType,
-} = require('discord.js');
-
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const economy = require('./economy-store');
 const ADMIN = PermissionFlagsBits.Administrator;
 const commands = [];
-
-function memberCommand(name, description) {
-  return new SlashCommandBuilder().setName(name).setDescription(description);
-}
-function adminCommand(name, description) {
-  return memberCommand(name, description).setDefaultMemberPermissions(ADMIN);
-}
-
+const user = (n,d) => new SlashCommandBuilder().setName(n).setDescription(d);
+const staff = (n,d) => user(n,d).setDefaultMemberPermissions(ADMIN);
 commands.push(
-  memberCommand('help', 'عرض قائمة أوامر E7 BOT').toJSON(),
-  memberCommand('ping', 'قياس سرعة استجابة البوت').toJSON(),
-  memberCommand('botinfo', 'عرض معلومات البوت').toJSON(),
-  memberCommand('serverinfo', 'عرض معلومات السيرفر').toJSON(),
-  memberCommand('userinfo', 'عرض معلومات عضو').addUserOption(o => o.setName('member').setDescription('العضو المطلوب').setRequired(false)).toJSON(),
-  memberCommand('avatar', 'عرض صورة عضو').addUserOption(o => o.setName('member').setDescription('العضو المطلوب').setRequired(false)).toJSON(),
-  memberCommand('roleinfo', 'عرض معلومات رتبة').addRoleOption(o => o.setName('role').setDescription('الرتبة').setRequired(true)).toJSON(),
-  memberCommand('channelinfo', 'عرض معلومات قناة').addChannelOption(o => o.setName('channel').setDescription('القناة').setRequired(false)).toJSON(),
-  memberCommand('poll', 'إنشاء تصويت سريع').addStringOption(o => o.setName('question').setDescription('موضوع التصويت').setMaxLength(180).setRequired(true)).addStringOption(o => o.setName('option1').setDescription('الخيار الأول').setMaxLength(60).setRequired(true)).addStringOption(o => o.setName('option2').setDescription('الخيار الثاني').setMaxLength(60).setRequired(true)).toJSON(),
-
-  adminCommand('clear', 'حذف عدد من الرسائل (حتى 100)').addIntegerOption(o => o.setName('amount').setDescription('عدد الرسائل من 1 إلى 100').setMinValue(1).setMaxValue(100).setRequired(true)).toJSON(),
-  adminCommand('slowmode', 'تحديد مهلة الكتابة في القناة').addIntegerOption(o => o.setName('seconds').setDescription('من 0 إلى 21600 ثانية').setMinValue(0).setMaxValue(21600).setRequired(true)).toJSON(),
-  adminCommand('lock', 'قفل القناة الحالية أمام الأعضاء').toJSON(),
-  adminCommand('unlock', 'فتح القناة الحالية أمام الأعضاء').toJSON(),
-  adminCommand('announce', 'نشر إعلان في قناة محددة').addChannelOption(o => o.setName('channel').setDescription('قناة الإعلان').addChannelTypes(ChannelType.GuildText).setRequired(true)).addStringOption(o => o.setName('message').setDescription('نص الإعلان').setMaxLength(1800).setRequired(true)).toJSON(),
-  adminCommand('kick', 'طرد عضو من السيرفر').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('السبب').setMaxLength(400).setRequired(false)).toJSON(),
-  adminCommand('ban', 'حظر عضو من السيرفر').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('السبب').setMaxLength(400).setRequired(false)).toJSON(),
-  adminCommand('timeout', 'تقييد عضو مؤقتًا').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o => o.setName('minutes').setDescription('المدة بالدقائق (1 إلى 40320)').setMinValue(1).setMaxValue(40320).setRequired(true)).addStringOption(o => o.setName('reason').setDescription('السبب').setMaxLength(400).setRequired(false)).toJSON(),
-  adminCommand('untimeout', 'إزالة التقييد المؤقت عن عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).toJSON(),
-  adminCommand('nickname', 'تغيير اسم عضو داخل السيرفر').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addStringOption(o => o.setName('name').setDescription('الاسم الجديد؛ اتركه فارغًا لإزالة الاسم المستعار').setMaxLength(32).setRequired(false)).toJSON(),
-  adminCommand('createchannel', 'إنشاء قناة نصية أو صوتية').addStringOption(o => o.setName('name').setDescription('اسم القناة').setMaxLength(90).setRequired(true)).addStringOption(o => o.setName('type').setDescription('نوع القناة').addChoices({ name: 'نصية', value: 'text' }, { name: 'صوتية', value: 'voice' }).setRequired(true)).toJSON(),
-  adminCommand('createrole', 'إنشاء رتبة بلون محدد').addStringOption(o => o.setName('name').setDescription('اسم الرتبة').setMaxLength(100).setRequired(true)).addStringOption(o => o.setName('color').setDescription('لون Hex مثل #8b5cf6').setRequired(false)).toJSON(),
-  adminCommand('addrole', 'إسناد رتبة إلى عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addRoleOption(o => o.setName('role').setDescription('الرتبة').setRequired(true)).toJSON(),
-  adminCommand('removerole', 'إزالة رتبة من عضو').addUserOption(o => o.setName('member').setDescription('العضو').setRequired(true)).addRoleOption(o => o.setName('role').setDescription('الرتبة').setRequired(true)).toJSON(),
+ user('help','عرض أوامر E7 HOST').toJSON(),
+ user('balance','عرض رصيدك أو رصيد عضو').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(false)).toJSON(),
+ user('daily','استلام المكافأة اليومية').toJSON(),
+ user('work','العمل وكسب العملات').toJSON(),
+ user('pay','تحويل العملات لعضو').addUserOption(o=>o.setName('member').setDescription('المستلم').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)).toJSON(),
+ user('leaderboard','ترتيب أغنى أعضاء السيرفر').toJSON(),
+ user('shop','عرض متجر السيرفر').toJSON(),
+ user('buy','شراء عنصر من المتجر').addStringOption(o=>o.setName('item_id').setDescription('معرف العنصر').setRequired(true)).toJSON(),
+ user('inventory','عرض مقتنياتك أو مقتنيات عضو').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(false)).toJSON(),
+ user('profile','عرض ملفك الاقتصادي').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(false)).toJSON(),
+ staff('shopadd','إضافة منتج للمتجر').addStringOption(o=>o.setName('item_id').setDescription('معرف فريد').setMaxLength(32).setRequired(true)).addStringOption(o=>o.setName('name').setDescription('اسم المنتج').setMaxLength(80).setRequired(true)).addIntegerOption(o=>o.setName('price').setDescription('السعر').setMinValue(1).setMaxValue(1000000000).setRequired(true)).addStringOption(o=>o.setName('description').setDescription('الوصف').setMaxLength(180).setRequired(false)).toJSON(),
+ staff('shopremove','حذف منتج من المتجر').addStringOption(o=>o.setName('item_id').setDescription('معرف المنتج').setRequired(true)).toJSON(),
+ staff('coinsadd','إضافة عملات لعضو').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)).toJSON(),
+ staff('coinsremove','سحب عملات من عضو').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('المبلغ').setMinValue(1).setMaxValue(1000000000).setRequired(true)).toJSON(),
+ staff('coinsset','تعيين رصيد عضو').addUserOption(o=>o.setName('member').setDescription('العضو').setRequired(true)).addIntegerOption(o=>o.setName('amount').setDescription('الرصيد الجديد').setMinValue(0).setMaxValue(1000000000).setRequired(true)).toJSON()
 );
-
-const ADMIN_COMMANDS = new Set([
-  'clear', 'slowmode', 'lock', 'unlock', 'announce', 'kick', 'ban',
-  'timeout', 'untimeout', 'nickname', 'createchannel', 'createrole', 'addrole', 'removerole',
-]);
-
-function hasPermission(interaction, permission) {
-  return Boolean(interaction.memberPermissions?.has(permission));
+const ADMIN_COMMANDS = new Set(['shopadd','shopremove','coinsadd','coinsremove','coinsset']);
+const fmt = n => new Intl.NumberFormat('en-US').format(n);
+const makeEmbed = (title,description) => new EmbedBuilder().setColor(0x7653D8).setTitle(title).setDescription(description).setTimestamp();
+const adminCheck = i => Boolean(i.memberPermissions && i.memberPermissions.has(ADMIN));
+const errors = { INVALID_AMOUNT:'المبلغ غير صالح.', SAME_USER:'لا يمكنك التحويل لنفسك.', INSUFFICIENT_FUNDS:'رصيدك غير كافٍ.', ITEM_EXISTS:'معرف المنتج أو اسمه مستخدم مسبقًا.', ITEM_NOT_FOUND:'المنتج غير موجود.' };
+function remaining(ms){const s=Math.ceil(ms/1000);return Math.floor(s/3600)+' ساعة و '+Math.floor((s%3600)/60)+' دقيقة';}
+async function executeCommand(i){
+ if(!i.inGuild()) return i.reply({content:'نظام E7 HOST الاقتصادي يعمل داخل السيرفرات فقط.',ephemeral:true});
+ const n=i.commandName,g=i.guildId,uid=i.user.id;
+ if(ADMIN_COMMANDS.has(n)&&!adminCheck(i)) return i.reply({content:'هذا الأمر مخصص لحاملي صلاحية Administrator.',ephemeral:true});
+ if(n==='help') return i.reply({embeds:[makeEmbed('E7 HOST — Economy System','**أوامر الأعضاء**\n/balance — رصيد العملات\n/daily — مكافأة يومية\n/work — اكسب من العمل\n/pay — تحويل العملات\n/leaderboard — ترتيب الأعضاء\n/shop — المتجر\n/buy — شراء منتج\n/inventory — المقتنيات\n/profile — الملف الاقتصادي\n\n**أوامر الإدارة**\n/shopadd — إضافة منتج\n/shopremove — حذف منتج\n/coinsadd — إضافة رصيد\n/coinsremove — سحب رصيد\n/coinsset — تعيين رصيد')],ephemeral:true});
+ if(n==='balance'||n==='profile'){
+  const target=i.options.getUser('member')||i.user,b=await economy.balance(g,target.id),inv=await economy.inventory(g,target.id);
+  return i.reply({embeds:[makeEmbed((n==='balance'?'رصيد ':'الملف الاقتصادي — ')+target.username,'**المحفظة:** '+fmt(b.balance)+' 🪙\n**إجمالي المكتسب:** '+fmt(b.totalEarned)+'\n**إجمالي المصروف:** '+fmt(b.totalSpent)+'\n**المقتنيات:** '+inv.length)]});
+ }
+ if(n==='daily'){const r=await economy.daily(g,uid);return i.reply(r.ok?{embeds:[makeEmbed('المكافأة اليومية','استلمت **'+fmt(r.amount)+'** 🪙\nرصيدك الآن **'+fmt(r.balance)+'** 🪙')]}:{content:'استلمت مكافأتك. ارجع بعد '+remaining(r.remaining)+'.',ephemeral:true});}
+ if(n==='work'){const r=await economy.work(g,uid);return i.reply(r.ok?{embeds:[makeEmbed('عمل مكتمل','ربحت **'+fmt(r.amount)+'** 🪙\nرصيدك الآن **'+fmt(r.balance)+'** 🪙')]}:{content:'عملت مؤخرًا. حاول بعد '+remaining(r.remaining)+'.',ephemeral:true});}
+ if(n==='pay'){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.reply({content:'لا يمكن تحويل العملات إلى حساب بوت.',ephemeral:true});const r=await economy.transfer(g,uid,target.id,amount);return i.reply({embeds:[makeEmbed('تم التحويل','حوّلت **'+fmt(amount)+'** 🪙 إلى '+target+'. رصيدك المتبقي **'+fmt(r.from)+'** 🪙')]});}
+ if(n==='leaderboard'){const rows=await economy.leaderboard(g),text=rows.length?rows.map((x,k)=>(k+1)+'. <@'+x.id+'> — **'+fmt(x.total)+'** 🪙').join('\n'):'لا توجد أرصدة مسجلة بعد.';return i.reply({embeds:[makeEmbed('🏆 أغنى أعضاء السيرفر',text)]});}
+ if(n==='shop'){const items=await economy.shop(g),text=items.length?items.map(x=>'**'+x.name+'** — '+fmt(x.price)+' 🪙\n'+(x.description||'بدون وصف')+'\nID: '+x.id).join('\n\n').slice(0,4000):'المتجر فارغ حاليًا.';return i.reply({embeds:[makeEmbed('🛒 متجر السيرفر',text)]});}
+ if(n==='buy'){const r=await economy.buy(g,uid,i.options.getString('item_id',true));return i.reply({embeds:[makeEmbed('تم الشراء','اشتريت **'+r.item.name+'** مقابل **'+fmt(r.item.price)+'** 🪙.\nرصيدك المتبقي **'+fmt(r.balance)+'** 🪙.\nتم تسجيل العنصر في مقتنياتك.')]});}
+ if(n==='inventory'){const target=i.options.getUser('member')||i.user,items=await economy.inventory(g,target.id),counts={};for(const item of items)counts[item.name]=(counts[item.name]||0)+1;const text=Object.keys(counts).length?Object.entries(counts).map(x=>'• **'+x[0]+'** × '+x[1]).join('\n').slice(0,4000):'الحقيبة فارغة.';return i.reply({embeds:[makeEmbed('مقتنيات '+target.username,text)],ephemeral:true});}
+ if(n==='shopadd'){const id=i.options.getString('item_id',true).toLowerCase(),name=i.options.getString('name',true),price=i.options.getInteger('price',true),description=i.options.getString('description')||'';if(!/^[a-z0-9_-]{2,32}$/.test(id))return i.reply({content:'المعرف يجب أن يكون 2–32 حرفًا إنجليزيًا أو رقمًا أو _ أو -.',ephemeral:true});await economy.addItem(g,{id,name,price,description,createdAt:Date.now()});return i.reply({content:'تمت إضافة **'+name+'** بسعر **'+fmt(price)+'** 🪙.',ephemeral:true});}
+ if(n==='shopremove'){const item=await economy.removeItem(g,i.options.getString('item_id',true));return i.reply({content:'تم حذف **'+item.name+'** من المتجر.',ephemeral:true});}
+ if(['coinsadd','coinsremove','coinsset'].includes(n)){const target=i.options.getUser('member',true),amount=i.options.getInteger('amount',true);if(target.bot)return i.reply({content:'لا يمكن تعديل رصيد حساب بوت.',ephemeral:true});const mode={coinsadd:'add',coinsremove:'remove',coinsset:'set'}[n],r=await economy.adminAdjust(g,target.id,amount,mode);return i.reply({content:'تم تحديث رصيد '+target+'. الرصيد الحالي **'+fmt(r.balance)+'** 🪙.',ephemeral:true});}
 }
-
-function safeReason(value, fallback) {
-  return (value && value.trim()) || fallback;
-}
-
-async function requireBotPermission(interaction, permission) {
-  const me = interaction.guild.members.me || await interaction.guild.members.fetchMe();
-  if (!me.permissions.has(permission)) {
-    await interaction.reply({ content: 'البوت لا يملك الصلاحية المطلوبة لتنفيذ هذا الأمر.', ephemeral: true });
-    return false;
-  }
-  return true;
-}
-
-function makeEmbed(title, description) {
-  return new EmbedBuilder()
-    .setColor(0x7653D8)
-    .setTitle(title)
-    .setDescription(description)
-    .setTimestamp();
-}
-
-async function executeCommand(interaction) {
-  const name = interaction.commandName;
-  if (ADMIN_COMMANDS.has(name) && !hasPermission(interaction, ADMIN)) {
-    return interaction.reply({ content: 'هذا الأمر مخصص لأعضاء السيرفر الذين يملكون صلاحية Administrator.', ephemeral: true });
-  }
-
-  if (name === 'ping') {
-    return interaction.reply({ content: `Pong! API: **${Math.round(interaction.client.ws.ping)}ms**`, ephemeral: true });
-  }
-
-  if (name === 'help') {
-    const embed = makeEmbed('E7 BOT — مركز الأوامر', [
-      '**أوامر الأعضاء**',
-      '`/ping` قياس الاستجابة',
-      '`/botinfo` معلومات البوت',
-      '`/serverinfo` معلومات السيرفر',
-      '`/userinfo` معلومات عضو',
-      '`/avatar` صورة عضو',
-      '`/roleinfo` معلومات رتبة',
-      '`/channelinfo` معلومات قناة',
-      '`/poll` إنشاء تصويت',
-      '',
-      '**أوامر Administrator**',
-      '`/clear` حذف رسائل',
-      '`/slowmode` مهلة الكتابة',
-      '`/lock` و `/unlock` قفل وفتح القناة',
-      '`/announce` إعلان',
-      '`/kick` و `/ban` إدارة العضوية',
-      '`/timeout` و `/untimeout` التقييد المؤقت',
-      '`/nickname` تغيير اسم عضو',
-      '`/createchannel` إنشاء قناة',
-      '`/createrole` إنشاء رتبة',
-      '`/addrole` و `/removerole` إسناد وإزالة رتبة',
-    ].join('\n'));
-    return interaction.reply({ embeds: [embed], ephemeral: true });
-  }
-
-  if (name === 'botinfo') {
-    const user = interaction.client.user;
-    const embed = makeEmbed('معلومات E7 BOT', `**الاسم:** ${user.tag}\n**المعرّف:** ${user.id}\n**السيرفرات:** ${interaction.client.guilds.cache.size}\n**مكتبة التشغيل:** discord.js v14`);
-    return interaction.reply({ embeds: [embed], ephemeral: true });
-  }
-
-  if (name === 'serverinfo') {
-    const guild = interaction.guild;
-    const owner = await guild.fetchOwner();
-    const embed = makeEmbed(guild.name, `**المالك:** ${owner.user.tag}\n**الأعضاء:** ${guild.memberCount}\n**القنوات:** ${guild.channels.cache.size}\n**الأدوار:** ${guild.roles.cache.size}\n**تاريخ الإنشاء:** <t:${Math.floor(guild.createdTimestamp / 1000)}:D>`);
-    if (guild.iconURL()) embed.setThumbnail(guild.iconURL({ size: 256 }));
-    return interaction.reply({ embeds: [embed] });
-  }
-
-  if (name === 'userinfo') {
-    const user = interaction.options.getUser('member') || interaction.user;
-    const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-    const embed = makeEmbed('معلومات العضو', `**الحساب:** ${user.tag}\n**المعرّف:** ${user.id}\n**انضم للسيرفر:** ${member ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>` : 'غير موجود في السيرفر'}\n**إنشاء الحساب:** <t:${Math.floor(user.createdTimestamp / 1000)}:D>`);
-    if (user.displayAvatarURL()) embed.setThumbnail(user.displayAvatarURL({ size: 256 }));
-    return interaction.reply({ embeds: [embed] });
-  }
-
-  if (name === 'avatar') {
-    const user = interaction.options.getUser('member') || interaction.user;
-    const url = user.displayAvatarURL({ size: 1024 });
-    return interaction.reply({ content: `صورة **${user.tag}**\n${url}` });
-  }
-
-  if (name === 'roleinfo') {
-    const role = interaction.options.getRole('role');
-    const embed = makeEmbed(`الرتبة: ${role.name}`, `**المعرّف:** ${role.id}\n**الأعضاء:** ${role.members.size}\n**اللون:** ${role.hexColor}\n**الترتيب:** ${role.position}\n**مدارة من تكامل:** ${role.managed ? 'نعم' : 'لا'}`);
-    return interaction.reply({ embeds: [embed] });
-  }
-
-  if (name === 'channelinfo') {
-    const channel = interaction.options.getChannel('channel') || interaction.channel;
-    const embed = makeEmbed(`القناة: #${channel.name || 'غير مسماة'}`, `**المعرّف:** ${channel.id}\n**النوع:** ${channel.type}\n**تاريخ الإنشاء:** <t:${Math.floor(channel.createdTimestamp / 1000)}:D>`);
-    return interaction.reply({ embeds: [embed], ephemeral: true });
-  }
-
-  if (name === 'poll') {
-    const question = interaction.options.getString('question', true);
-    const first = interaction.options.getString('option1', true);
-    const second = interaction.options.getString('option2', true);
-    const message = await interaction.channel.send({
-      embeds: [makeEmbed(`تصويت: ${question}`, `👍 **${first}**\n👎 **${second}**\n\nالتصويت مفتوح لأعضاء القناة.`)],
-      allowedMentions: { parse: [] },
-    });
-    await message.react('👍');
-    await message.react('👎');
-    return interaction.reply({ content: `تم نشر التصويت: ${message.url}`, ephemeral: true });
-  }
-
-  if (name === 'clear') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageMessages)) return;
-    const amount = interaction.options.getInteger('amount', true);
-    const deleted = await interaction.channel.bulkDelete(amount, true);
-    return interaction.reply({ content: `تم حذف **${deleted.size}** رسالة. الرسائل الأقدم من 14 يومًا لا يحذفها Discord بهذه الطريقة.`, ephemeral: true });
-  }
-
-  if (name === 'slowmode') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageChannels)) return;
-    const seconds = interaction.options.getInteger('seconds', true);
-    await interaction.channel.setRateLimitPerUser(seconds, `E7 BOT by ${interaction.user.tag}`);
-    return interaction.reply({ content: seconds ? `تم ضبط Slowmode على ${seconds} ثانية.` : 'تم إيقاف Slowmode.', ephemeral: true });
-  }
-
-  if (name === 'lock' || name === 'unlock') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageChannels)) return;
-    const locked = name === 'lock';
-    const permission = interaction.channel.isVoiceBased() ? 'Connect' : 'SendMessages';
-    await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
-      [permission]: locked ? false : null,
-    }, { reason: `E7 BOT: ${name} by ${interaction.user.tag}` });
-    return interaction.reply({ content: locked ? 'تم قفل القناة أمام الأعضاء.' : 'تم فتح القناة.' });
-  }
-
-  if (name === 'announce') {
-    const channel = interaction.options.getChannel('channel', true);
-    const botMember = interaction.guild.members.me || await interaction.guild.members.fetchMe();
-    if (!channel.permissionsFor(botMember)?.has(PermissionFlagsBits.SendMessages)) {
-      return interaction.reply({ content: 'البوت لا يملك صلاحية إرسال الرسائل في قناة الإعلان المحددة.', ephemeral: true });
-    }
-    const message = interaction.options.getString('message', true);
-    await channel.send({ embeds: [makeEmbed('إعلان السيرفر', message)], allowedMentions: { parse: [] } });
-    return interaction.reply({ content: `تم نشر الإعلان في ${channel}.`, ephemeral: true });
-  }
-
-  if (name === 'kick' || name === 'ban') {
-    const user = interaction.options.getUser('member', true);
-    const reason = safeReason(interaction.options.getString('reason'), `By ${interaction.user.tag}`);
-    const member = await interaction.guild.members.fetch(user.id);
-    if (member.id === interaction.guild.ownerId || member.id === interaction.user.id) {
-      return interaction.reply({ content: 'لا يمكن تنفيذ هذا الإجراء على مالك السيرفر أو على حسابك.', ephemeral: true });
-    }
-    if (name === 'kick') {
-      if (!await requireBotPermission(interaction, PermissionFlagsBits.KickMembers)) return;
-      await member.kick(reason);
-      return interaction.reply({ content: `تم طرد **${user.tag}**. السبب: ${reason}`, ephemeral: true });
-    }
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.BanMembers)) return;
-    await interaction.guild.members.ban(user.id, { reason, deleteMessageSeconds: 0 });
-    return interaction.reply({ content: `تم حظر **${user.tag}**. السبب: ${reason}`, ephemeral: true });
-  }
-
-  if (name === 'timeout' || name === 'untimeout') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ModerateMembers)) return;
-    const user = interaction.options.getUser('member', true);
-    const member = await interaction.guild.members.fetch(user.id);
-    if (member.id === interaction.guild.ownerId || member.id === interaction.user.id) {
-      return interaction.reply({ content: 'لا يمكن تنفيذ هذا الإجراء على مالك السيرفر أو على حسابك.', ephemeral: true });
-    }
-    if (name === 'timeout') {
-      const minutes = interaction.options.getInteger('minutes', true);
-      const reason = safeReason(interaction.options.getString('reason'), `By ${interaction.user.tag}`);
-      await member.timeout(minutes * 60 * 1000, reason);
-      return interaction.reply({ content: `تم تقييد **${user.tag}** لمدة ${minutes} دقيقة.`, ephemeral: true });
-    }
-    await member.timeout(null, `Timeout removed by ${interaction.user.tag}`);
-    return interaction.reply({ content: `تمت إزالة التقييد عن **${user.tag}**.`, ephemeral: true });
-  }
-
-  if (name === 'nickname') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageNicknames)) return;
-    const user = interaction.options.getUser('member', true);
-    const member = await interaction.guild.members.fetch(user.id);
-    const nickname = interaction.options.getString('name');
-    await member.setNickname(nickname, `E7 BOT by ${interaction.user.tag}`);
-    return interaction.reply({ content: nickname ? `تم تغيير اسم ${user.tag} إلى **${nickname}**.` : `تمت إزالة الاسم المستعار عن ${user.tag}.`, ephemeral: true });
-  }
-
-  if (name === 'createchannel') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageChannels)) return;
-    const channelName = interaction.options.getString('name', true);
-    const type = interaction.options.getString('type', true);
-    const channel = await interaction.guild.channels.create({
-      name: channelName,
-      type: type === 'text' ? ChannelType.GuildText : ChannelType.GuildVoice,
-      reason: `E7 BOT by ${interaction.user.tag}`,
-    });
-    return interaction.reply({ content: `تم إنشاء القناة ${channel} بنجاح.`, ephemeral: true });
-  }
-
-  if (name === 'addrole' || name === 'removerole') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageRoles)) return;
-    const user = interaction.options.getUser('member', true);
-    const role = interaction.options.getRole('role', true);
-    const member = await interaction.guild.members.fetch(user.id);
-    const botMember = interaction.guild.members.me || await interaction.guild.members.fetchMe();
-    if (role.managed || role.id === interaction.guild.id || role.position >= botMember.roles.highest.position) {
-      return interaction.reply({ content: 'ترتيب الرتبة أو حالتها يمنع البوت من إدارتها.', ephemeral: true });
-    }
-    if (name === 'addrole') await member.roles.add(role, `E7 BOT by ${interaction.user.tag}`);
-    else await member.roles.remove(role, `E7 BOT by ${interaction.user.tag}`);
-    return interaction.reply({ content: name === 'addrole' ? `تم إسناد ${role} إلى **${user.tag}**.` : `تمت إزالة ${role} من **${user.tag}**.`, ephemeral: true });
-  }
-
-  if (name === 'createrole') {
-    if (!await requireBotPermission(interaction, PermissionFlagsBits.ManageRoles)) return;
-    const roleName = interaction.options.getString('name', true);
-    const color = interaction.options.getString('color') || '#8b5cf6';
-    if (!/^#[0-9a-f]{6}$/i.test(color)) {
-      return interaction.reply({ content: 'صيغة اللون غير صحيحة. استخدم Hex مثل #8b5cf6.', ephemeral: true });
-    }
-    const role = await interaction.guild.roles.create({
-      name: roleName,
-      color: Number.parseInt(color.slice(1), 16),
-      reason: `E7 BOT by ${interaction.user.tag}`,
-    });
-    return interaction.reply({ content: `تم إنشاء الرتبة ${role} بنجاح.`, ephemeral: true });
-  }
-}
-
-async function handleInteraction(interaction) {
-  if (!interaction.isChatInputCommand()) return;
-  try {
-    await executeCommand(interaction);
-  } catch (error) {
-    const response = { content: 'تعذر تنفيذ الأمر. تحقق من صلاحيات البوت ورتبته وإعدادات القناة.', ephemeral: true };
-    if (interaction.deferred || interaction.replied) {
-      await interaction.followUp(response).catch(() => {});
-    } else {
-      await interaction.reply(response).catch(() => {});
-    }
-    const code = typeof error?.code === 'number' || typeof error?.code === 'string' ? String(error.code).slice(0, 32) : 'command_failed';
-    console.error(`[COMMAND] ${interaction.commandName} failed; code=${code}`);
-  }
-}
-
-async function registerCommands(client) {
-  if (!client.application?.commands) throw new Error('Discord application commands are not ready.');
-  const guildId = process.env.DISCORD_GUILD_ID;
-  const registered = await client.application.commands.set(commands, guildId || undefined);
-  console.log(`[COMMANDS] Registered ${registered.size} slash commands ${guildId ? 'for configured guild' : 'globally'}.`);
-}
-
-module.exports = { commands, ADMIN_COMMANDS, executeCommand, handleInteraction, registerCommands };
+async function handleInteraction(i){if(!i.isChatInputCommand())return;try{await executeCommand(i);}catch(e){const msg=errors[e.message]||'تعذر تنفيذ العملية. حاول لاحقًا.';if(i.replied||i.deferred)await i.followUp({content:msg,ephemeral:true}).catch(()=>{});else await i.reply({content:msg,ephemeral:true}).catch(()=>{});console.error('[ECONOMY] '+i.commandName+' failed: '+String(e.message||'error').replace(/[^a-z0-9_]/gi,'').slice(0,40));}}
+async function registerCommands(client){if(!client.application||!client.application.commands)throw new Error('Discord application commands are not ready.');const gid=process.env.DISCORD_GUILD_ID,result=await client.application.commands.set(commands,gid||undefined);console.log('[COMMANDS] Registered '+result.size+' E7 HOST economy commands.');}
+module.exports={commands,ADMIN_COMMANDS,executeCommand,handleInteraction,registerCommands};
