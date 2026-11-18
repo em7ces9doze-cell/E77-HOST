@@ -1,33 +1,25 @@
-# E77 GAMES
+# Gulf Bank
 
-بوت ألعاب جماعي عربي لـ Discord. طريقة الاستخدام الأساسية عبر الرسائل:
+بنك افتراضي ترفيهي داخل Discord. جميع الأرصدة والاستثمارات والأصول افتراضية ولا تمثل أموالًا حقيقية أو خدمات مالية.
 
-1. اكتب `+العاب` في روم نصي.
-2. اختر لعبة من القائمة.
-3. انضم إلى الجلسة عبر الزر.
-4. ابدأ الجولة وتفاعل مع الأزرار والقوائم.
-
-## Current MVP
-
-- قائمة ألعاب تفاعلية.
-- لعبة الروليت الجماعية (2–10 لاعبين).
-- جلسة مستقلة لكل روم.
-- اختيار عشوائي للاعب صاحب الدور.
-- إخراج لاعب من الجولة فقط، دون طرده من سيرفر Discord.
-- نقطة فحص HTTP على `/health`.
+## Usage
+- `+بنك` — لوحة البنك
+- `+رصيدي` — الرصيد
+- `+يومي` — مكافأة يومية
+- `+عمل` — مهمة عمل عشوائية
+- `+نرد [مبلغ]` — تحدي نرد ضد البنك (الأرقام من 1 إلى 10)
+- `+تحدي` — تحديات متاحة
+- `+مساعدة` — قائمة الاستخدام
 
 ## Requirements
-
 - Node.js 22+
 - Discord bot token in `DISCORD_TOKEN` (or `BOT_TOKEN`) secret.
-- Enable the **Message Content Intent** in Discord Developer Portal and include it in the bot configuration.
+- Enable Message Content Intent in Discord Developer Portal.
+- Startup clears global and per-server slash-command registrations.
 
 ## Run
-
 ```bash
 npm ci
 npm test
 npm start
 ```
-
-No Slash Commands are registered. Do not add Slash Commands to this project.
