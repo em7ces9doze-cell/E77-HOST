@@ -85,7 +85,11 @@ async function handleComponent(i){
  if(i.isStringSelectMenu()&&i.customId.startsWith('gb:quiz:')){const correct=Number(i.customId.split(':')[2]),choice=Number(i.values[0]);return i.reply({embeds:[em(choice===correct?'✅ إجابة صحيحة':'❌ إجابة غير صحيحة',choice===correct?'أحسنت! إجابة صحيحة.':'ليست الإجابة الصحيحة. حاول في سؤال آخر.')],ephemeral:true});}
  const action=i.isStringSelectMenu()?i.values[0]:i.customId.slice(3);
  if(action==='stocks')return i.reply({embeds:[stockBoard()],ephemeral:true});
- if(action==='stockportfolio')return i.reply({embeds:[view(action,i.user.id)],ephemeral:true});\n if(action==='games')return i.reply({...gamesPanel(),ephemeral:true});\n if(action==='quiz')return i.reply({...quizCard(),ephemeral:true});\n if(action==='memory')return i.reply({embeds:[em('🧠 تحدي الذاكرة','افتح مدينة الخليج عبر +العالم ثم ادخل ساحة الألعاب لتجربة تحدي الذاكرة التفاعلي.')],ephemeral:true});\n if(action==='world'){const base=process.env.PUBLIC_BASE_URL;if(!base)return i.reply({content:'لم يتم ضبط PUBLIC_BASE_URL في إعدادات الاستضافة بعد.',ephemeral:true});return i.reply({content:'مدينة بنك الخليج ثلاثية الأبعاد: '+base,ephemeral:true});}
+ if(action==='stockportfolio')return i.reply({embeds:[view(action,i.user.id)],ephemeral:true});
+ if(action==='games')return i.reply({...gamesPanel(),ephemeral:true});
+ if(action==='quiz')return i.reply({...quizCard(),ephemeral:true});
+ if(action==='memory')return i.reply({embeds:[em('🧠 تحدي الذاكرة','افتح مدينة الخليج عبر +العالم ثم ادخل ساحة الألعاب لتجربة تحدي الذاكرة التفاعلي.')],ephemeral:true});
+ if(action==='world'){const base=process.env.PUBLIC_BASE_URL;if(!base)return i.reply({content:'لم يتم ضبط PUBLIC_BASE_URL في إعدادات الاستضافة بعد.',ephemeral:true});return i.reply({content:'مدينة بنك الخليج ثلاثية الأبعاد: '+base,ephemeral:true});}
  return i.reply({embeds:[view(action,i.user.id)],ephemeral:true});
 }
 module.exports={handleMessage,handleComponent,dashboard};
