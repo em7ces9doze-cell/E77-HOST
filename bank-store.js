@@ -1,12 +1,25 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const FILE=process.env.GULF_BANK_DATA_FILE||path.join(process.cwd(),'data','gulf-bank.json');
-const START=1000,DAY=86400000,WORK_CD=1800000;
+const START=1000,DAY=86400000,WORK_CD=1800000,MARKET_TICK=600000;
 const market={GOLD:{name:'الذهب',price:120},OIL:{name:'النفط',price:95},TECH:{name:'التقنية',price:150},FOOD:{name:'الأغذية',price:75}};
-function read(){try{const d=JSON.parse(fs.readFileSync(FILE,'utf8'));if(!d||!d.users)throw Error('INVALID_STORE');return d;}catch(e){if(e.code==='ENOENT')return{users:{},transactions:[]};throw e;}}
+const companies={
+ NAMA:{name:'نماء للصناعات',sector:'الصناعة',price:85,volatility:.035},
+ RAWAF:{name:'روافد للتقنية',sector:'التقنية',price:140,volatility:.065},
+ MADA:{name:'مدى للاتصالات',sector:'الاتصالات',price:110,volatility:.045},
+ BUNYAN:{name:'بنيان للتطوير',sector:'العقار',price:95,volatility:.055},
+ SAFWA:{name:'الصفوة للأغذية',sector:'الأغذية',price:70,volatility:.03},
+ TAWAZON:{name:'توازن للطاقة',sector:'الطاقة',price:125,volatility:.05},
+ MARSA:{name:'مرسى للنقل',sector:'النقل',price:65,volatility:.06},
+ RIMAL:{name:'رمال للتعدين',sector:'التعدين',price:155,volatility:.075},
+ WIFaq:{name:'وفاق للخدمات',sector:'الخدمات',price:90,volatility:.04},
+ AFAQ:{name:'آفاق للرعاية',sector:'الرعاية',price:105,volatility:.05}
+};
+function read(){try{const d=JSON.parse(fs.readFileSync(FILE,'utf8'));if(!d||!d.users)throw Error('INVALID_STORE');d.transactions=d.transactions||[];d.stocks=d.stocks||{};for(const [s,c] of Object.entries(companies))if(!d.stocks[s])d.stocks[s]={price:c.price,previous:c.price,updatedAt:0};return d;}catch(e){if(e.code==='ENOENT')return{users:{},transactions:[],stocks:{}};throw e;}}
 function write(d){fs.mkdirSync(path.dirname(FILE),{recursive:true});const t=FILE+'.'+process.pid+'.tmp';fs.writeFileSync(t,JSON.stringify(d,null,2),{mode:0o600});fs.renameSync(t,FILE);}
-function acc(d,id){id=String(id);return d.users[id]||(d.users[id]={balance:START,savings:0,holdings:{},xp:0,lastDaily:0,lastWork:0,challengeDay:'',challenges:0});}
-function log(d,id,type,amount,note){d.transactions.unshift({id:String(id),type,amount,note,at:Date.now()});d.transactions=d.transactions.slice(0,2000);}
+function acc(d,id){id=String(id);return d.users[id]||(d.users[id]={balance:START,savings:0,holdings:{},stocks:{},xp:0,lastDaily:0,lastWork:0,challengeDay:'',challenges:0});}
+function log(d,id,type,amount,note){d.transactions.unshift({id:String(id),type,amount,note,at:Date.now()});d.transactions=d.transactions.slice(0,3000);}
+function tick(d){const now=Date.now();for(const [s,c] of Object.entries(companies)){const q=d.stocks[s]||(d.stocks[s]={price:c.price,previous:c.price,updatedAt:0});if(now-q.updatedAt>=MARKET_TICK){q.previous=q.price;const move=(Math.random()*2-1)*c.volatility;q.price=Math.max(5,Math.round(q.price*(1+move)));q.updatedAt=now;}}}
 function balance(id){const d=read(),a=acc(d,id);write(d);return JSON.parse(JSON.stringify(a));}
 function daily(id){const d=read(),a=acc(d,id),now=Date.now();if(now-a.lastDaily<DAY)return{ok:false,remaining:DAY-(now-a.lastDaily)};a.lastDaily=now;a.balance+=250;a.xp+=10;log(d,id,'daily',250,'المكافأة اليومية');write(d);return{ok:true,amount:250,account:a};}
 function work(id){const d=read(),a=acc(d,id),now=Date.now();if(now-a.lastWork<WORK_CD)return{ok:false,remaining:WORK_CD-(now-a.lastWork)};const jobs=[['ساعدت في متجر',100],['أنجزت توصيلًا',130],['قدمت خدمة تصميم',160],['أنهيت مهمة تقنية',190],['نظمت فعالية',120]],j=jobs[Math.floor(Math.random()*jobs.length)];a.lastWork=now;a.balance+=j[1];a.xp+=5;log(d,id,'work',j[1],j[0]);write(d);return{ok:true,job:j[0],amount:j[1],account:a};}
@@ -14,7 +27,11 @@ function dice(id,stake){const n=Math.floor(Number(stake));if(!Number.isSafeInteg
 function transfer(from,to,amount){const n=Math.floor(Number(amount));if(!to||String(from)===String(to)||!Number.isSafeInteger(n)||n<1)return{ok:false,reason:'INVALID'};const d=read(),a=acc(d,from);if(a.balance<n)return{ok:false,reason:'LOW'};acc(d,to).balance+=n;a.balance-=n;log(d,from,'transfer',-n,'تحويل إلى '+to);log(d,to,'transfer',n,'تحويل من '+from);write(d);return{ok:true,balance:a.balance};}
 function savings(id,action,amount){const n=Math.floor(Number(amount));if(!Number.isSafeInteger(n)||n<1)return{ok:false};const d=read(),a=acc(d,id);if(action==='in'){if(a.balance<n)return{ok:false};a.balance-=n;a.savings+=n;}else{if(a.savings<n)return{ok:false};a.savings-=n;a.balance+=n;}log(d,id,'savings',action==='in'?-n:n,'حساب التوفير');write(d);return{ok:true,account:a};}
 function trade(id,side,symbol,qty){symbol=String(symbol||'').toUpperCase();const n=Math.floor(Number(qty)),asset=market[symbol];if(!asset||!Number.isSafeInteger(n)||n<1||n>10000)return{ok:false};const d=read(),a=acc(d,id),total=asset.price*n;a.holdings[symbol]=a.holdings[symbol]||0;if(side==='buy'){if(a.balance<total)return{ok:false,reason:'LOW'};a.balance-=total;a.holdings[symbol]+=n;}else{if(a.holdings[symbol]<n)return{ok:false,reason:'ASSET'};a.holdings[symbol]-=n;a.balance+=total;}log(d,id,'trade',side==='buy'?-total:total,side+' '+n+' '+symbol);write(d);return{ok:true,total,account:a};}
+function stockMarket(){const d=read();tick(d);write(d);return Object.entries(companies).map(([symbol,c])=>({symbol,name:c.name,sector:c.sector,price:d.stocks[symbol].price,previous:d.stocks[symbol].previous,change:d.stocks[symbol].price-d.stocks[symbol].previous}));}
+function buyStock(id,symbol,budget){symbol=String(symbol||'').toUpperCase();const n=Math.floor(Number(budget));if(!companies[symbol]||!Number.isSafeInteger(n)||n<1||n>10000000)return{ok:false,reason:'INVALID'};const d=read();tick(d);const a=acc(d,id),price=d.stocks[symbol].price,shares=Math.floor(n/price),total=shares*price;if(shares<1)return{ok:false,reason:'BUDGET',price};if(a.balance<total)return{ok:false,reason:'LOW'};a.stocks=a.stocks||{};const old=a.stocks[symbol]||{shares:0,cost:0};old.shares+=shares;old.cost+=total;a.stocks[symbol]=old;a.balance-=total;a.xp+=2;log(d,id,'stock_buy',-total,'شراء '+shares+' سهم '+companies[symbol].name);write(d);return{ok:true,symbol,name:companies[symbol].name,shares,price,total,balance:a.balance};}
+function sellStock(id,symbol,shares){symbol=String(symbol||'').toUpperCase();const n=Math.floor(Number(shares));if(!companies[symbol]||!Number.isSafeInteger(n)||n<1)return{ok:false,reason:'INVALID'};const d=read();tick(d);const a=acc(d,id);a.stocks=a.stocks||{};const h=a.stocks[symbol]||{shares:0,cost:0};if(h.shares<n)return{ok:false,reason:'SHARES'};const price=d.stocks[symbol].price,total=price*n,avg=h.cost/h.shares||0,realized=Math.round((price-avg)*n);h.shares-=n;h.cost=Math.max(0,h.cost-Math.round(avg*n));a.balance+=total;a.xp+=1;log(d,id,'stock_sell',total,'بيع '+n+' سهم '+companies[symbol].name+' | نتيجة '+realized);write(d);return{ok:true,symbol,name:companies[symbol].name,shares:n,price,total,realized,balance:a.balance};}
+function stockPortfolio(id){const d=read();tick(d);const a=acc(d,id);a.stocks=a.stocks||{};const rows=Object.entries(a.stocks).filter(([,h])=>h.shares>0).map(([s,h])=>({symbol:s,name:companies[s].name,shares:h.shares,price:d.stocks[s].price,value:h.shares*d.stocks[s].price,cost:h.cost,profit:h.shares*d.stocks[s].price-h.cost}));write(d);return rows;}
 function history(id){return read().transactions.filter(x=>x.id===String(id)).slice(0,10);}
-function leaderboard(){return Object.entries(read().users).map(([id,a])=>({id,total:a.balance+a.savings})).sort((a,b)=>b.total-a.total).slice(0,10);}
+function leaderboard(){const d=read();tick(d);const rows=Object.entries(d.users).map(([id,a])=>{let total=a.balance+a.savings;for(const [s,h] of Object.entries(a.stocks||{}))total+=h.shares*(d.stocks[s]?.price||0);return{id,total};}).sort((a,b)=>b.total-a.total).slice(0,10);write(d);return rows;}
 function challenge(id){const d=read(),a=acc(d,id),day=new Date().toISOString().slice(0,10);if(a.challengeDay!==day){a.challengeDay=day;a.challenges=0;}if(a.challenges>=3){write(d);return{ok:false};}a.challenges++;const reward=100+a.challenges*25;a.balance+=reward;a.xp+=15;log(d,id,'challenge',reward,'تحدي يومي');write(d);return{ok:true,reward,remaining:3-a.challenges};}
-module.exports={START,market,balance,daily,work,dice,transfer,savings,trade,history,leaderboard,challenge};
+module.exports={START,market,companies,balance,daily,work,dice,transfer,savings,trade,stockMarket,buyStock,sellStock,stockPortfolio,history,leaderboard,challenge};
