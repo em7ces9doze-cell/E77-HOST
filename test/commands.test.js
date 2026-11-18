@@ -1,35 +1,27 @@
 'use strict';
-
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { PermissionFlagsBits } = require('discord.js');
-const { commands, ADMIN_COMMANDS } = require('../commands');
-
-test('E7 HOST economy slash commands are unique', () => {
-  const names = commands.map(command => command.name);
-  assert.equal(new Set(names).size, names.length);
-  assert.equal(names.length, 23);
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const {PermissionFlagsBits}=require('discord.js');
+const {commands,ADMIN_ACTIONS}=require('../commands');
+const byName=new Map(commands.map(x=>[x.name,x]));
+test('E77 exposes four clear top-level command groups only',()=>{
+ assert.deepEqual([...byName.keys()].sort(),['coins','e77-admin','hosting','store'].sort());
 });
-
-test('economy administration commands require Administrator', () => {
-  const byName = new Map(commands.map(command => [command.name, command]));
-  assert.deepEqual([...ADMIN_COMMANDS].sort(), ['coinsadd','coinsremove','coinsset','hosting-embed','hosting-room','shopadd','shopremove'].sort());
-  for (const name of ADMIN_COMMANDS) {
-    assert.equal(byName.get(name).default_member_permissions, PermissionFlagsBits.Administrator.toString());
-  }
+test('hosting group contains setup, panel and guide actions',()=>{
+ const names=byName.get('hosting').options.map(x=>x.name);
+ assert.deepEqual(names,['setup','panel','guide']);
 });
-
-test('member economy commands are available without admin restriction', () => {
-  const byName = new Map(commands.map(command => [command.name, command]));
-  for (const name of ['help','balance','bank','deposit','withdraw','transactions','daily','work','pay','leaderboard','shop','buy','inventory','profile']) {
-    assert.ok(byName.has(name), 'Missing command: '+name);
-    assert.equal(byName.get(name).default_member_permissions, undefined);
-  }
+test('store group separates customer and staff actions',()=>{
+ const names=byName.get('store').options.map(x=>x.name);
+ assert.deepEqual(names,['browse','buy','add','remove']);
+ assert.ok(ADMIN_ACTIONS.has('store:add'));
+ assert.ok(ADMIN_ACTIONS.has('store:remove'));
 });
-
-test('generic moderation commands are not part of the E7 HOST economy product', () => {
-  const names = new Set(commands.map(command => command.name));
-  for (const name of ['kick','ban','timeout','clear','slowmode','createchannel','createrole']) {
-    assert.equal(names.has(name), false);
-  }
+test('coin group keeps wallet actions together',()=>{
+ const names=byName.get('coins').options.map(x=>x.name);
+ assert.deepEqual(names,['balance','daily','work','transfer','deposit','withdraw','history']);
+});
+test('admin group is Discord Administrator restricted',()=>{
+ assert.equal(byName.get('e77-admin').default_member_permissions,PermissionFlagsBits.Administrator.toString());
+ for(const name of ['hosting:setup','hosting:panel','store:add','store:remove'])assert.ok(ADMIN_ACTIONS.has(name));
 });
