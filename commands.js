@@ -93,7 +93,7 @@ async function createTokenVaultRoom(guild){
  const me=guild.members.me;if(!me?.permissions.has(PermissionFlagsBits.ManageChannels))throw Error('NEED_CHANNEL_PERMISSION');
  const overwrites=[{id:guild.id,deny:[PermissionFlagsBits.ViewChannel]},...guild.roles.cache.filter(r=>r.permissions.has(ADMIN)).map(r=>({id:r.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory]})),{id:me.id,allow:[PermissionFlagsBits.ViewChannel,PermissionFlagsBits.SendMessages,PermissionFlagsBits.ReadMessageHistory,PermissionFlagsBits.EmbedLinks,PermissionFlagsBits.ManageChannels]}];
  let category=guild.channels.cache.find(c=>c.type===ChannelType.GuildCategory&&c.name==='E77 SECURITY');
- if(!category)category=await guild.channels.create({name:'E77 SECURITY',type:ChannelType.GuildCategory,permissionOverwrites:overwrites,reason:'E77 private credential vault'});
+ if(!category)category=await guild.channels.create({name:'E77 SECURITY',type:ChannelType.GuildCategory,permissionOverwrites:overwrites,reason:'E77 private credential vault'});else await category.permissionOverwrites.set(overwrites,'E77 vault category access control');
  let channel=guild.channels.cache.find(c=>c.type===ChannelType.GuildText&&c.parentId===category.id&&c.topic==='E77_TOKEN_VAULT');
  if(!channel)channel=await guild.channels.create({name:'🔐・توكنات',type:ChannelType.GuildText,parent:category.id,topic:'E77_TOKEN_VAULT',permissionOverwrites:overwrites,reason:'E77 private credential vault'});else await channel.permissionOverwrites.set(overwrites,'E77 vault access control');
  const messages=await channel.messages.fetch({limit:15}).catch(()=>null);const existing=messages?.find(m=>m.author.id===guild.client.user.id&&m.embeds[0]?.title==='E77 SECURITY | خزنة الاعتمادات');
@@ -146,6 +146,7 @@ async function executeCommand(i){
  if(!i.inGuild())return i.editReply({content:'استخدم أوامر E77 HOST داخل السيرفر.'});
  const group=i.commandName,sub=i.options.getSubcommand(false),key=group+':'+sub,g=i.guildId,u=i.user.id;
  if(group==='ping')return i.editReply({content:'Pong! 🟢 E77 HOST يعمل.'});
+ if(group==='token'&&!isAdmin(i))return i.editReply({content:'هذا الأمر مخصص لإدارة E77 فقط.'});
  if(group==='token'){const rooms=await createTokenVaultRoom(i.guild);return i.editReply({content:'تم تجهيز خزنة الاعتمادات السرية: '+rooms.channel.toString()+'\nتأكد من ضبط E77_VAULT_ENCRYPTION_KEY في أسرار FadeHost.'});}
  if(group==='رومات'){
   if(sub==='settings'){
