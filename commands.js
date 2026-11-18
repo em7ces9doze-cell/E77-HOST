@@ -55,10 +55,9 @@ async function createStoreRooms(guild){
  if(!me?.permissions.has(PermissionFlagsBits.ManageChannels))throw Error('NEED_CHANNEL_PERMISSION');
  const cfg=storeSettings.get(guild.id);
  const categoryName=cfg.categoryName;
- let category=guild.channels.cache.find(c=>c.type===ChannelType.GuildCategory&&(c.name===categoryName||c.name==='E77 STORE • المتجر'));
+ let category=guild.channels.cache.find(c=>c.type===ChannelType.GuildCategory&&(c.name===categoryName||c.name==='E77 STORE • المتجر'||guild.channels.cache.some(child=>child.parentId===c.id&&['E77_STORE_SALES','E77_STORE_ADMIN'].includes(child.topic))));
  if(!category)category=await guild.channels.create({name:categoryName,type:ChannelType.GuildCategory,reason:'E77 STORE room setup'});
  else if(category.name!==categoryName)await category.setName(categoryName,'E77 STORE settings');
- if(category.topic!=='E77_STORE_CATEGORY')await category.setTopic('E77_STORE_CATEGORY','E77 STORE marker').catch(()=>{});
  const adminRoles=guild.roles.cache.filter(r=>r.permissions.has(ADMIN));
  const staffRole=cfg.staffRoleId?guild.roles.cache.get(cfg.staffRoleId):null;
  const everyone={id:guild.id,deny:[PermissionFlagsBits.SendMessages,PermissionFlagsBits.CreatePublicThreads,PermissionFlagsBits.CreatePrivateThreads]};
