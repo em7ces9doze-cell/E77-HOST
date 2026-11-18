@@ -1,0 +1,26 @@
+"use strict";
+const test=require("node:test"),assert=require("node:assert/strict"),fs=require("node:fs/promises"),os=require("node:os"),path=require("node:path");
+let root,store;
+test("project lifecycle, frame editing and settings persist safely",async t=>{
+root=await fs.mkdtemp(path.join(os.tmpdir(),"stop-motion-test-"));process.env.STUDIO_DATA_DIR=root;store=require("../src/store");await store.ensure();
+const g="guild-test",u="user-test",p=await store.create(g,u,"Test film");
+assert.equal(p.name,"Test film");assert.equal(p.settings.fps,10);
+const a=store.framePath(p.id,1,".jpg"),b=store.framePath(p.id,2,".png"),c=store.framePath(p.id,3,".webp");
+await Promise.all([fs.writeFile(a,"a"),fs.writeFile(b,"b"),fs.writeFile(c,"c")]);
+await store.add(g,u,a);await store.add(g,u,b);await store.add(g,u,c);
+let current=await store.get(g,u);assert.equal(current.frames.length,3);
+current=await store.moveFrame(g,u,3,1);assert.equal(current.frames[0].path,c);
+current=await store.setFrameDuration(g,u,1,0.75);assert.equal(current.frames[0].durationSec,0.75);
+await assert.rejects(store.setFrameDuration(g,u,1,8),/Invalid frame duration/);
+current=await store.settings(g,u,"fps","24");assert.equal(current.settings.fps,24);
+current=await store.settings(g,u,"quality","1080");assert.equal(current.settings.quality,1080);
+current=await store.settings(g,u,"aspect","portrait");assert.equal(current.settings.aspect,"portrait");
+current=await store.rename(g,u,"Edited film");assert.equal(current.name,"Edited film");
+current=await store.removeFrame(g,u,2);assert.equal(current.frames.length,2);
+assert.equal(await fs.stat(b).then(()=>true,()=>false),false);
+assert.equal((await store.list(g,u)).length,1);
+await store.setDashboard(g,u,"channel-test","message-test");
+assert.equal(await store.getDashboard(g,u,"channel-test"),"message-test");
+const deleted=await store.deleteActive(g,u);assert.equal(deleted,"Edited film");assert.equal(await store.get(g,u),null);assert.equal((await store.list(g,u)).length,0);
+});
+test.after(async()=>{if(root)await fs.rm(root,{recursive:true,force:true});});
