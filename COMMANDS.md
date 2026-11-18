@@ -1,61 +1,33 @@
-# E77 HOST — Hosting, Commerce, Economy & Discord Bridge
+# E77 HOST — Hosting-first Discord control bot
 
-## Member economy commands
-- `/help`: complete command guide.
-- `/balance [member]`: wallet, bank and total wealth for a member.
-- `/bank`: private view of your wallet and bank.
-- `/deposit amount`: move coins from wallet to bank.
-- `/withdraw amount`: move coins from bank to wallet.
-- `/transactions`: latest 10 transactions for your account (private).
-- `/daily`: claim 150 coins every 24 hours.
-- `/work`: earn 35–90 coins once per hour.
-- `/pay member amount`: transfer coins to another member.
-- `/leaderboard`: top ten members by wallet plus bank.
-- `/shop`: view server products.
-- `/buy item_id`: buy a product and add it to inventory.
-- `/inventory [member]`: view purchased items.
-- `/profile [member]`: full economy profile.
+## Customer commands (4 simple groups)
+- `/hosting guide`: explains how to request hosting.
+- `/store browse`: lists published hosting plans and digital services.
+- `/store buy item_id`: purchases a product. Hosting products open a private order channel after successful payment; service products are added to purchase history.
+- `/coins balance|daily|work|transfer|deposit|withdraw|history`: all wallet and bank actions are grouped under one command.
 
-## Hosting and Embed commands
-- `/hosting-room`: administrator-only setup for the public hosting category and request information channel. It reuses the existing category/channel instead of duplicating them.
-- `/hosting-embed channel title description [color]`: administrator-only custom Embed publisher. Color accepts six hexadecimal characters; invalid colors are rejected.
-- `/hosting-buy item_id`: purchases an item configured in the server shop, then opens a private order room for the buyer, the bot, and Administrator roles. If payment fails, the unused room is deleted. Use hosting products only in this flow; ordinary shop items should continue using `/buy`.
-- `/coin-info`: explains the internal virtual coin, wallet/bank distinction, and transaction history. E77 coins are not cryptocurrency and have no cash value.
+## Administrator workflow
+- `/hosting setup`: create or reuse the E77 HOST category and the start-here panel.
+- `/hosting panel channel`: publish the official hosting Embed in a chosen text channel.
+- `/store add item_id name price kind [description]`: add a product. Choose kind=hosting for a hosting plan or kind=service for another digital service.
+- `/store remove item_id`: remove a product.
+- `/e77-admin coins-add|coins-remove|coins-set`: controlled wallet adjustments. Requires Discord Administrator.
 
-The bot needs `Manage Channels` to set up hosting rooms and create private purchase rooms. The bot must also have `View Channel`, `Send Messages`, and `Read Message History`. Administrator roles are granted access to private order rooms.
+The bot needs Manage Channels, View Channel, Send Messages, Read Message History and Embed Links. Do not grant Administrator to the bot. The buyer, bot and server Administrator roles can see private hosting order channels. Duplicate open orders for the same member and plan are blocked.
 
-## Administrator economy commands
-All staff commands require Discord Administrator both in command visibility and runtime authorization:
-- `/shopadd item_id name price [description]`
-- `/shopremove item_id`
-- `/coinsadd member amount`
-- `/coinsremove member amount`
-- `/coinsset member amount`
-
-## Economy rules and data
-- New wallets start with 250 coins.
-- Daily reward: 150 coins; 24-hour cooldown.
-- Work reward: 35–90 coins; one-hour cooldown.
-- Amounts are validated and balance overflow is rejected.
-- Wallet and bank are separate; deposits and withdrawals are serialized with all other economy writes.
-- Each guild has isolated balances, shops, inventories and transaction history.
-- The most recent 1,000 server transactions are retained; `/transactions` shows the caller's latest 10.
-- Coins are fictional server points and have no cash value.
-
-Economy data is stored in JSON at `data/economy.json` by default. Set `E7_ECONOMY_FILE` to a persistent disk path on FadeHost. Use persistent storage and make backups before redeploying. Do not commit live data, tokens or bridge secrets.
+## E77 Credits economy
+E77 is an internal virtual points balance for purchases inside the Discord server. It is not a cryptocurrency, investment, cash balance or withdrawable asset.
+- New accounts start with 100 E77.
+- Daily reward: 75 E77 once every 24 hours.
+- Community activity reward: 10–25 E77 once every 3 hours.
+- Wallet and bank remain separate; transfers, deposits, withdrawals, purchases and staff adjustments are recorded.
+- Existing account balances and transaction history are preserved by the v1-to-v2 migration.
+- Existing catalog items without a kind are migrated as digital services. Re-add a hosting plan with kind=hosting if it should create a private hosting order room.
+- Economy data remains in `data/economy.json`. Configure `E7_ECONOMY_FILE` to a persistent FadeHost disk path. Back up data before deployment. Never commit live data or secrets.
 
 ## EM7 CONTROL bridge
-The bridge worker remains in `bridge-engine.js` and continues to use the existing HTTPS `Authorization: Bearer` contract. Keep the current FadeHost values for `DISCORD_TOKEN`, `EM7_CONTROL_BOT_BRIDGE_SECRET`, `EM7_CONTROL_URL`, and any configured persistent state path. Never put secrets in GitHub.
+The bridge engine and its existing durable idempotency state are unchanged. Keep current FadeHost values for `DISCORD_TOKEN`, `EM7_CONTROL_BOT_BRIDGE_SECRET`, `EM7_CONTROL_URL` and the configured state path. Never put secrets in GitHub. Supported bridge operations remain `create_rooms`, `create_channel`, `create_role`, `update_role` and `set_channel_permissions`.
 
-Supported bridge operations remain: `create_rooms`, `create_channel`, `create_role`, `update_role`, and `set_channel_permissions`. The worker validates payloads and permissions, refuses Administrator grants, and uses a durable idempotency ledger. Do not delete `.em7-bridge/state.json` to force retries.
-
-## Deploy and verify
-FadeHost should deploy from repository `em7ces9doze-cell/E77-HOST`, branch `main`, with Node.js 22 or newer. Install dependencies, then run `npm run check` and `npm test`. Start command: `npm start`.
-
-After deployment, confirm:
-1. `[READY] Discord client connected.`
-2. `[COMMANDS] Registered 23 E77 HOST commands.`
-3. `[BRIDGE] worker_started` (when bridge credentials are correctly configured).
-4. Use `/help`, then test `/bank`, `/deposit`, `/withdraw`, and `/transactions` in a test server.
-
-If commands are registered globally, Discord propagation may take time. Set `DISCORD_GUILD_ID` to the intended test server ID for immediate guild-scoped updates. The ID is not a secret.
+## Deploy
+Repository: `em7ces9doze-cell/E77-HOST`, branch `main`. Node.js 22+. Install dependencies, run `npm run check`, `npm test`, then `npm start`.
+Expected logs: `[READY] Discord client connected.`, `[COMMANDS] Registered 4 E77 HOST command groups.` and `[BRIDGE] worker_started` when bridge credentials are configured.
