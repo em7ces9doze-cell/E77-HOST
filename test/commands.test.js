@@ -25,6 +25,6 @@ test('member commands remain available without default administrator restriction
   const byName = new Map(commands.map(command => [command.name, command]));
   for (const name of ['help', 'ping', 'botinfo', 'serverinfo', 'userinfo', 'avatar', 'roleinfo', 'channelinfo', 'poll']) {
     assert.ok(byName.has(name), `Missing member command: ${name}`);
-    assert.equal(byName.get(name).default_member_permissions, null);
+    assert.equal(byName.get(name).default_member_permissions, undefined);
   }
 });
