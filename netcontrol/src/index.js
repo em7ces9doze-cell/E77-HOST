@@ -31,7 +31,7 @@ async function runCommand(message, command) {
 }
 client.on(Events.MessageCreate, async (message) => {
   if (message.author.bot || !message.content.startsWith(prefix)) return;
-  const parts = message.content.slice(prefix.length).trim().split(/\\s+/);
+  const parts = message.content.slice(prefix.length).trim().split(/\s+/);
   const root = (parts.shift() || "").toLowerCase();
   if (root !== "nc" && root !== "netcontrol") return;
   const command = (parts.shift() || (root === "netcontrol" ? "panel" : "help")).toLowerCase();
