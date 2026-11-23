@@ -29,9 +29,20 @@ const commandData = [
     .setDescription("NETCONTROL home network monitor")
     .addSubcommand((sub) => sub.setName("status").setDescription("Show bot and router connector status"))
     .addSubcommand((sub) => sub.setName("devices").setDescription("Check whether device discovery is available"))
+    .addSubcommand((sub) => sub.setName("diagnostics").setDescription("Show bot service diagnostics"))
     .addSubcommand((sub) => sub.setName("help").setDescription("Show NETCONTROL command help"))
     .toJSON()
 ];
+
+function formatDuration(totalSeconds) {
+  const seconds = Math.max(0, Math.floor(totalSeconds));
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remaining = seconds % 60;
+  return [days ? days + "d" : null, hours ? hours + "h" : null, minutes ? minutes + "m" : null, remaining + "s"]
+    .filter(Boolean).join(" ");
+}
 
 function statusEmbed(status) {
   const label = status.state === "CONNECTED"
@@ -47,6 +58,8 @@ function statusEmbed(status) {
       { name: "Bot", value: client.isReady() ? "Online" : "Starting", inline: true },
       { name: "Router connector", value: label, inline: true },
       { name: "Connected devices", value: "Unavailable — no verified router data", inline: false },
+      { name: "Bot uptime", value: formatDuration(process.uptime()), inline: true },
+      { name: "Discord latency", value: client.ws.ping >= 0 ? client.ws.ping + " ms" : "Unavailable", inline: true },
       { name: "Details", value: String(status.message || "No additional details").slice(0, 1000) }
     )
     .setFooter({ text: "Authorized monitoring • No simulated network data" })
@@ -77,6 +90,7 @@ async function handleInteraction(interaction) {
         "**NETCONTROL commands**",
         "`/netcontrol status` — bot and router connector status.",
         "`/netcontrol devices` — check device-discovery availability.",
+        "`/netcontrol diagnostics` — bot uptime and Discord latency.",
         "`/netcontrol help` — show this help.",
         "",
         "Router integration is not configured yet. No router settings are changed by these commands."
@@ -96,6 +110,22 @@ async function handleInteraction(interaction) {
     if (action === "status") {
       const status = await router.getStatus();
       return interaction.editReply({ embeds: [statusEmbed(status)] });
+    }
+    if (action === "diagnostics") {
+      const embed = new EmbedBuilder()
+        .setColor(0x26384f)
+        .setTitle("NETCONTROL | Service Diagnostics")
+        .addFields(
+          { name: "Service", value: client.isReady() ? "Online" : "Starting", inline: true },
+          { name: "Uptime", value: formatDuration(process.uptime()), inline: true },
+          { name: "Discord gateway", value: client.ws.ping >= 0 ? client.ws.ping + " ms" : "Unavailable", inline: true },
+          { name: "Guilds", value: String(client.guilds.cache.size), inline: true },
+          { name: "Runtime", value: process.version, inline: true },
+          { name: "Router integration", value: "Not configured", inline: true }
+        )
+        .setFooter({ text: "Diagnostics do not test or modify the router" })
+        .setTimestamp();
+      return interaction.editReply({ embeds: [embed] });
     }
     if (action === "devices") {
       const result = await router.getDevices();
