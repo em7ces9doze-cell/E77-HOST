@@ -1,18 +1,27 @@
 # NETCONTROL BOT
 
-Discord-only network monitoring bot, isolated from the existing E77-HOST application.
+Discord slash-command network monitoring bot, isolated from the existing E77-HOST application.
 
-## Current foundation
-- Commands: !netcontrol, !nc status, !nc devices, !nc help.
-- Admin allowlist via ADMIN_USER_IDS.
-- Router adapter explicitly reports NOT_CONFIGURED; no fake device data.
-- No router-control operations until the exact firmware and supported interface are verified.
+## Slash commands
+- `/netcontrol status` — bot and router connector status (admins only).
+- `/netcontrol devices` — device-discovery availability (admins only).
+- `/netcontrol help` — command help.
+
+All command responses are ephemeral. Admin access is controlled by `ADMIN_USER_IDS`, a comma-separated list of Discord user IDs.
+
+## Environment
+- `DISCORD_TOKEN` — bot token; store only in the hosting provider's secret manager.
+- `ADMIN_USER_IDS` — Discord user IDs allowed to inspect network status.
+- `DISCORD_GUILD_ID` — optional test server ID. When set, commands register immediately in that server. When omitted, commands register globally and may take time to appear.
+- `ROUTER_CONNECTOR=disabled` — safe default until a supported router interface is verified.
 
 ## Run
-1. Create a Discord bot and invite it with message and embed permissions.
-2. Copy .env.example to .env and set DISCORD_TOKEN.
-3. Add your Discord user ID to ADMIN_USER_IDS.
-4. Enable Message Content Intent in the Discord Developer Portal.
-5. Run npm install, npm test, then npm start from this folder.
+1. Use Node.js 20 or newer.
+2. Set the environment variables in the hosting provider.
+3. Run `npm install`, `npm run check`, `npm test`, then `npm start` from this folder.
+4. Invite the Discord application with the `bot` and `applications.commands` scopes. The bot needs no message-content intent for slash commands.
 
-A remotely hosted bot cannot directly reach a private home LAN. Router integration will require a secure local connector with outbound encrypted connectivity. Never expose the router admin interface to the public internet or send credentials in Discord.
+## Router integration status
+The router connector currently reports `NOT_CONFIGURED`. Device discovery is not implemented, and no router-control operations are exposed. Do not treat an unavailable result as a successful connection or invent device data.
+
+A remotely hosted bot cannot directly reach a private home LAN. Router integration will require a secure local connector with outbound encrypted connectivity. Never expose the router admin interface to the public internet or send router credentials in Discord.
